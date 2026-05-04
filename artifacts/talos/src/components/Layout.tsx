@@ -1,70 +1,206 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ScrollText, Fingerprint, BarChart2, Activity } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LayoutDashboard, ScrollText, Fingerprint, BarChart2, Activity,
+  Cpu, Shield, Zap, Radio,
+} from "lucide-react";
 
 const nav = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/decisions", label: "Agent Log", icon: ScrollText },
-  { href: "/identity", label: "ERC-8004 ID", icon: Fingerprint },
-  { href: "/protocols", label: "Protocols", icon: BarChart2 },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, sub: "SYS_OVERVIEW" },
+  { href: "/decisions", label: "Agent Log", icon: ScrollText, sub: "DECISION_HISTORY" },
+  { href: "/identity", label: "ERC-8004 ID", icon: Fingerprint, sub: "AGENT_IDENTITY" },
+  { href: "/protocols", label: "Protocols", icon: BarChart2, sub: "YIELD_INTEL" },
 ];
+
+function MatrixRain() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.04]">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute top-0 font-mono text-[8px] text-primary leading-tight select-none"
+          style={{ left: `${12.5 * i}%` }}
+          animate={{ y: ["0%", "100%"] }}
+          transition={{
+            duration: 8 + i * 1.5,
+            repeat: Infinity,
+            ease: "linear",
+            delay: i * 0.7,
+          }}
+        >
+          {Array.from({ length: 20 }).map((_, j) => (
+            <div key={j}>{Math.random() > 0.5 ? "1" : "0"}</div>
+          ))}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function GlitchText({ text }: { text: string }) {
+  const [glitch, setGlitch] = useState(false);
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (Math.random() > 0.85) {
+        setGlitch(true);
+        setTimeout(() => setGlitch(false), 80);
+      }
+    }, 3000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span
+      className={`font-mono font-bold tracking-widest transition-all ${
+        glitch ? "text-destructive translate-x-0.5" : "text-primary"
+      }`}
+    >
+      {text}
+    </span>
+  );
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const [time, setTime] = useState(new Date());
+  const [tick, setTick] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setTime(new Date());
+      setTick((v) => !v);
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
+      {/* Scanline overlay */}
+      <div
+        className="pointer-events-none fixed inset-0 z-[100] opacity-[0.03]"
+        style={{
+          background:
+            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,100,0.15) 2px, rgba(0,255,100,0.15) 4px)",
+        }}
+      />
+
+      {/* CRT vignette */}
+      <div
+        className="pointer-events-none fixed inset-0 z-[99]"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%)",
+        }}
+      />
+
       {/* Top bar */}
-      <header className="border-b border-border/50 px-4 py-2 flex items-center justify-between bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-primary/10 px-4 py-2 flex items-center justify-between bg-card/80 backdrop-blur-sm sticky top-0 z-50 shrink-0">
+        {/* Left: brand */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-primary font-mono text-sm font-bold tracking-widest">TALOS</span>
-            <span className="text-muted-foreground font-mono text-xs">v4.0</span>
+            <div className="relative">
+              <Cpu className="w-4 h-4 text-primary" />
+              <motion.div
+                className="absolute inset-0 rounded-full bg-primary/20"
+                animate={{ scale: [1, 1.8, 1], opacity: [0.6, 0, 0.6] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            </div>
+            <GlitchText text="TALOS" />
+            <span className="text-muted-foreground font-mono text-[10px] border border-primary/20 px-1.5 rounded">
+              v4.0
+            </span>
           </div>
           <div className="h-3 w-px bg-border" />
           <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="font-mono text-xs text-muted-foreground">MANTLE_SEPOLIA</span>
+            <motion.span
+              className="w-1.5 h-1.5 rounded-full bg-primary"
+              animate={{ opacity: tick ? 1 : 0.3 }}
+              transition={{ duration: 0.3 }}
+            />
+            <span className="font-mono text-[10px] text-muted-foreground">MANTLE_SEPOLIA</span>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Activity className="w-3 h-3 text-primary" />
-          <span className="font-mono text-xs text-muted-foreground">ON-CHAIN_ACTIVE</span>
+
+        {/* Right: system clock + status */}
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 font-mono text-[10px] text-muted-foreground/60">
+            <Radio className="w-3 h-3 text-primary/60" />
+            <span>{time.toUTCString().split(" ").slice(4, 5)}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Zap className="w-3 h-3 text-accent" />
+            <span className="font-mono text-[10px] text-accent">AUTONOMOUS</span>
+          </div>
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <aside className="w-52 border-r border-border/50 bg-sidebar shrink-0 flex flex-col">
-          <nav className="flex flex-col gap-0.5 p-2 flex-1">
-            {nav.map(({ href, label, icon: Icon }) => {
+        <aside className="w-52 border-r border-primary/10 bg-sidebar shrink-0 flex flex-col relative overflow-hidden">
+          <MatrixRain />
+          <nav className="flex flex-col gap-0.5 p-2 flex-1 relative z-10">
+            {nav.map(({ href, label, icon: Icon, sub }) => {
               const active = href === "/" ? location === "/" : location.startsWith(href);
               return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded text-sm font-mono transition-colors ${
-                    active
-                      ? "bg-primary/10 text-primary border border-primary/20"
-                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  {label}
+                <Link key={href} href={href}>
+                  <motion.div
+                    whileHover={{ x: 2 }}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded cursor-pointer transition-all ${
+                      active
+                        ? "bg-primary/10 border border-primary/25 shadow-sm shadow-primary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent border border-transparent"
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-primary" : ""}`} />
+                    <div className="flex flex-col min-w-0">
+                      <span className={`font-mono text-xs font-semibold ${active ? "text-primary" : ""}`}>
+                        {label}
+                      </span>
+                      <span className="font-mono text-[9px] text-muted-foreground/40 tracking-wider">{sub}</span>
+                    </div>
+                    {active && (
+                      <motion.div
+                        layoutId="nav-indicator"
+                        className="ml-auto w-1 h-4 bg-primary rounded-full"
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      />
+                    )}
+                  </motion.div>
                 </Link>
               );
             })}
           </nav>
-          <div className="p-3 border-t border-border/50">
-            <div className="font-mono text-xs text-muted-foreground space-y-0.5">
-              <div className="text-primary/60">// ERC-8004</div>
-              <div className="truncate">TALOS-Alpha-001</div>
-              <div className="text-muted-foreground/50 text-[10px]">0xfe12...f4f7</div>
+
+          {/* Sidebar footer */}
+          <div className="p-3 border-t border-primary/10 relative z-10 space-y-2">
+            <div className="flex items-center gap-1.5 px-1">
+              <Shield className="w-3 h-3 text-primary/50" />
+              <span className="font-mono text-[9px] text-primary/50 tracking-wider">ERC-8004 VERIFIED</span>
+            </div>
+            <div className="px-1 space-y-0.5">
+              <div className="font-mono text-[10px] text-foreground/70">TALOS-Alpha-001</div>
+              <div className="font-mono text-[9px] text-muted-foreground/40">
+                0xfe12...f4f7
+              </div>
             </div>
           </div>
         </aside>
 
         {/* Main */}
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2 }}
+              className="h-full"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </main>
       </div>
     </div>
   );

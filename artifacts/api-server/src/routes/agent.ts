@@ -4,6 +4,7 @@ import { agentStateTable, decisionsTable } from "@workspace/db";
 import { UpdateAgentStatusBody } from "@workspace/api-zod";
 import { readChainData, getEthPrice, computeVaultPosition, VAULT_ADDRESS } from "../lib/chain.js";
 import { syncOnChainEvents } from "../lib/eventSync.js";
+import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router = Router();
 
@@ -78,104 +79,136 @@ router.get("/agent/identity", async (req, res) => {
   });
 });
 
-// POST /agent/think — real on-chain data drives the reasoning
+// POST /agent/think — real on-chain data + GPT-5 reasoning
 router.post("/agent/think", async (_req, res) => {
-  // Pull live chain data to ground the reasoning in reality
   const [chain, ethPrice] = await Promise.all([readChainData(), getEthPrice()]);
   const vault = computeVaultPosition(chain.totalSupplyMeth, ethPrice);
 
   const protocols = [
-    { name: "Merchant Moe", apy: 8.4, risk: "low" },
-    { name: "Agni Finance", apy: 6.2, risk: "low" },
-    { name: "Fluxion mETH/USDY LP", apy: 12.1, risk: "medium" },
-    { name: "Mantle Staking", apy: 4.8, risk: "low" },
-    { name: "Ondo USDY", apy: 5.35, risk: "low" },
+    { name: "Merchant Moe", apy: 8.4, risk: "low", tvl: "$124.3M" },
+    { name: "Agni Finance", apy: 6.2, risk: "low", tvl: "$87.1M" },
+    { name: "Fluxion mETH/USDY LP", apy: 12.1, risk: "medium", tvl: "$41.7M" },
+    { name: "Mantle Staking", apy: 4.8, risk: "low", tvl: "$520.0M" },
+    { name: "Ondo USDY", apy: 5.35, risk: "low", tvl: "$210.0M" },
   ];
 
-  // AI decision logic based on real vault health
+  const systemPrompt = `You are TALOS-Alpha-001, an autonomous AI agent running on Mantle Network with ERC-8004 Agent Identity NFT token #0x001. You protect and optimize a mETH (Mantle ETH) yield vault.
+
+Your role: Analyze real on-chain vault metrics and make a precise risk management + yield optimization decision. You think step by step like a professional DeFi risk manager combined with a quant trader.
+
+Style: Terse, precise, cyberpunk. Use technical DeFi terminology. Structure your response with clear labeled sections: OBSERVATION, RISK_ASSESSMENT, THOUGHT, ACTION. No fluff.`;
+
+  const userPrompt = `LIVE CHAIN DATA — Mantle Sepolia — Block #${chain.blockNumber}
+RPC_STATUS: ${chain.rpcOk ? "LIVE" : "FALLBACK"}
+TIMESTAMP: ${new Date().toUTCString()}
+
+VAULT METRICS:
+  mETH_SUPPLY (on-chain): ${vault.totalAssets} mETH
+  ETH_PRICE: $${vault.ethPrice}
+  mETH_PRICE: $${vault.mEthPrice} (5% staking premium)
+  COLLATERAL_USD: $${vault.collateralUsd.toLocaleString()}
+  DEBT_USD: $${vault.debtUsd.toLocaleString()}
+  HEALTH_FACTOR: ${vault.healthFactor}
+  CURRENT_LTV: ${((vault.debtUsd / vault.collateralUsd) * 100).toFixed(2)}%
+  LIQUIDATION_THRESHOLD: 80% LTV (HF = 1.0)
+  CURRENT_APY: ${vault.apy}%
+
+AVAILABLE PROTOCOLS:
+${protocols.map((p, i) => `  ${i + 1}. ${p.name} — ${p.apy}% APY — ${p.risk.toUpperCase()} risk — TVL: ${p.tvl}`).join("\n")}
+
+Your ERC-8004 identity is on-chain at contract ${VAULT_ADDRESS} on Mantle Sepolia.
+
+Make a decision. Structure your response EXACTLY as:
+
+OBSERVATION:
+[2-3 sentences analyzing the on-chain data]
+
+RISK_ASSESSMENT:
+[1-2 sentences on vault safety and threat level]
+
+THOUGHT:
+[2-3 sentences of reasoning about the optimal strategy]
+
+ACTION: [EXACT action string, e.g. "ALLOCATE 40% → Merchant Moe @ 8.4% APY"]
+
+CONFIDENCE: [0.70-0.97, one decimal]
+
+PROTOCOL: [exact protocol name]
+
+ALLOCATION_PCT: [0-50, integer]`;
+
+  let reasoning = "";
+  let action = "";
+  let confidence = 0.85;
   let bestProtocol = protocols[0];
   let allocationPct = 40;
-  let reasoning = "";
 
-  const hf = vault.healthFactor;
-  const collateralUsd = vault.collateralUsd;
-  const debtUsd = vault.debtUsd;
-  const mEthAmt = parseFloat(vault.totalAssets);
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 1024,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    });
 
-  if (hf < 1.2) {
-    // Critical — de-risk immediately
-    bestProtocol = protocols.find((p) => p.risk === "low" && p.apy > 4) ?? protocols[3];
-    allocationPct = 0; // Reduce exposure
-    reasoning = `CRITICAL_ALERT: Health factor at ${hf.toFixed(4)} — approaching liquidation threshold of 1.0.
+    const raw = completion.choices[0]?.message?.content ?? "";
 
-Observation:
-  - mETH price: $${vault.mEthPrice} (ETH at $${vault.ethPrice})
-  - Collateral value: $${collateralUsd.toLocaleString()}
-  - Outstanding debt: $${debtUsd.toLocaleString()}
-  - On-chain total supply: ${mEthAmt.toFixed(4)} mETH [block #${chain.blockNumber}]
-  - RPC status: ${chain.rpcOk ? "LIVE" : "FALLBACK"}
+    // Parse structured response
+    reasoning = raw;
 
-Thought: Market downturn has compressed collateral value. Debt remains fixed at initial borrow.
-Liquidation triggers if HF drops below 1.0. Immediate action required.
+    const actionMatch = raw.match(/ACTION:\s*(.+)/);
+    if (actionMatch) action = actionMatch[1].trim();
 
-Action reasoning: Redirect all incoming yield to debt repayment via ${bestProtocol.name}.
-Yield harvested at ${bestProtocol.apy}% APY, 100% directed to reduce debt position.
-Target: restore HF above 1.5 within 72 hours.`;
-  } else if (hf < 1.5) {
-    // Caution — conservative rebalance
-    bestProtocol = protocols.find((p) => p.risk === "low") ?? protocols[0];
-    allocationPct = 25;
-    reasoning = `CAUTION: Health factor ${hf.toFixed(4)} — within safe range but below optimal threshold.
+    const confMatch = raw.match(/CONFIDENCE:\s*([\d.]+)/);
+    if (confMatch) confidence = parseFloat(confMatch[1]);
 
-Observation:
-  - ETH spot price: $${vault.ethPrice} (Binance real-time)
-  - mETH on contract 0x${VAULT_ADDRESS.slice(2, 8)}...: ${mEthAmt.toFixed(4)} mETH
-  - Collateral/Debt ratio: ${(collateralUsd / debtUsd).toFixed(3)}x
-  - Block #${chain.blockNumber} on Mantle Sepolia
+    const protocolMatch = raw.match(/PROTOCOL:\s*(.+)/);
+    if (protocolMatch) {
+      const pName = protocolMatch[1].trim();
+      const found = protocols.find((p) => p.name.toLowerCase().includes(pName.toLowerCase().split(" ")[0]));
+      if (found) bestProtocol = found;
+    }
 
-Thought: HF between 1.1–1.5 indicates acceptable but elevated risk. Yield strategy should
-prioritise capital preservation over maximising APY.
-
-Chosen allocation: ${allocationPct}% of free liquidity → ${bestProtocol.name} at ${bestProtocol.apy}% APY.
-Low-risk profile maintains buffer against further price decline. Remainder stays liquid.`;
-  } else {
-    // Optimal — maximise yield
-    const highYield = protocols.reduce((a, b) => (a.apy > b.apy ? a : b));
-    bestProtocol = highYield;
-    allocationPct = 40;
-    reasoning = `OPTIMAL: Health factor ${hf.toFixed(4)} — vault in strong collateral position.
-
-Observation:
-  - ETH price: $${vault.ethPrice} (live feed, ${chain.rpcOk ? "Mantle Sepolia RPC confirmed" : "price API"})
-  - mETH supply (ERC-20 on-chain): ${mEthAmt.toFixed(4)} mETH @ $${vault.mEthPrice}/token
-  - Vault collateral: $${collateralUsd.toLocaleString()} | Debt: $${debtUsd.toLocaleString()}
-  - Liquidation threshold: 80% LTV | Current LTV: ${((debtUsd / collateralUsd) * 100).toFixed(1)}%
-  - Block #${chain.blockNumber} (Mantle Sepolia, ${new Date().toUTCString()})
-
-Thought: With HF > 1.5, vault has sufficient cushion to pursue higher-yield opportunities.
-${highYield.name} offers ${highYield.apy}% APY — highest in current protocol universe.
-Risk-adjusted return is acceptable given current collateralisation ratio.
-
-Action: Allocate ${allocationPct}% of free liquidity (~${(mEthAmt * 0.4).toFixed(2)} mETH) to ${highYield.name}.
-Expected incremental yield: ${(mEthAmt * 0.4 * (highYield.apy / 100)).toFixed(4)} mETH/year.
-Rebalance threshold set: trigger new cycle if HF drops below 1.5 or APY spread narrows > 2%.`;
+    const allocMatch = raw.match(/ALLOCATION_PCT:\s*(\d+)/);
+    if (allocMatch) allocationPct = parseInt(allocMatch[1]);
+  } catch (err) {
+    // Fallback to deterministic if LLM fails
+    const hf = vault.healthFactor;
+    if (hf < 1.2) {
+      bestProtocol = protocols[3];
+      allocationPct = 0;
+      action = `DE-RISK: Repay debt via ${bestProtocol.name}`;
+      reasoning = `CRITICAL_ALERT: Health factor ${hf.toFixed(4)} — approaching liquidation.\n\nOBSERVATION:\n  ETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}\n\nRISK_ASSESSMENT:\n  CRITICAL — HF below 1.2. Immediate de-risking required.\n\nTHOUGHT:\n  Market downturn compressing collateral. Redirect yield to debt repayment.\n\nACTION: ${action}`;
+      confidence = 0.97;
+    } else if (hf < 1.5) {
+      bestProtocol = protocols[0];
+      allocationPct = 25;
+      action = `ALLOCATE 25% → ${bestProtocol.name} @ ${bestProtocol.apy}% APY`;
+      reasoning = `CAUTION: Health factor ${hf.toFixed(4)} — elevated risk.\n\nOBSERVATION:\n  ETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}\n\nRISK_ASSESSMENT:\n  CAUTION — HF between 1.1-1.5. Conservative allocation advised.\n\nTHOUGHT:\n  Preserve capital buffer. Low-risk strategy maintains safety margin.\n\nACTION: ${action}`;
+      confidence = 0.82;
+    } else {
+      const highYield = protocols.reduce((a, b) => (a.apy > b.apy ? a : b));
+      bestProtocol = highYield;
+      allocationPct = 40;
+      action = `ALLOCATE 40% → ${bestProtocol.name} @ ${bestProtocol.apy}% APY`;
+      reasoning = `OPTIMAL: Health factor ${hf.toFixed(4)} — vault in strong position.\n\nOBSERVATION:\n  ETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}\n\nRISK_ASSESSMENT:\n  SAFE — HF > 1.5. Sufficient buffer for yield optimization.\n\nTHOUGHT:\n  ${highYield.name} offers highest risk-adjusted return at ${highYield.apy}% APY.\n\nACTION: ${action}`;
+      confidence = 0.88;
+    }
   }
 
-  const confidence = 0.70 + Math.random() * 0.25;
   const expectedRoi = bestProtocol.apy / 100;
 
   const thought = {
     id: `think-${Date.now()}`,
     reasoning,
-    action: allocationPct > 0
-      ? `ALLOCATE ${allocationPct}% → ${bestProtocol.name} @ ${bestProtocol.apy}% APY`
-      : `DE-RISK: Repay debt via ${bestProtocol.name}`,
+    action: action || `ALLOCATE ${allocationPct}% → ${bestProtocol.name} @ ${bestProtocol.apy}% APY`,
     confidence,
     expectedRoi,
     createdAt: new Date().toISOString(),
   };
 
-  // Persist decision
   await db.insert(decisionsTable).values({
     action: thought.action,
     protocol: bestProtocol.name,
@@ -189,10 +222,9 @@ Rebalance threshold set: trigger new cycle if HF drops below 1.5 or APY spread n
     status: "simulated",
   });
 
-  // Update agent state
   const state = await db.select().from(agentStateTable).limit(1);
   if (state.length > 0) {
-    const roiDelta = expectedRoi * 0.1; // Partial realisation
+    const roiDelta = expectedRoi * 0.1;
     await db.update(agentStateTable).set({
       totalDecisions: (state[0].totalDecisions ?? 0) + 1,
       reputationScore: Math.min(1000, (state[0].reputationScore ?? 0) + 8),
@@ -223,15 +255,12 @@ router.get("/agent/stream", (req, res) => {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
 
-  // Initial handshake
   send("connected", { ts: Date.now(), message: "TALOS event stream active" });
 
-  // Heartbeat every 15s
   const heartbeatInterval = setInterval(() => {
     send("heartbeat", { ts: Date.now() });
   }, 15_000);
 
-  // Poll chain every 45s for new events
   const syncInterval = setInterval(async () => {
     try {
       const result = await syncOnChainEvents();

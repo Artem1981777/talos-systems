@@ -1,0 +1,31 @@
+Ты — эксперт мирового уровня в AI Agents, Blockchain и Web3-хакатонах (опыт побед в ETHGlobal, DoraHacks, Binance Hackathon). Сейчас 2026 год, и мы участвуем в **The Turing Test Hackathon 2026** на Mantle Network (Phase 2 — AI Awakening, $100k призовой фонд).
+
+Проект называется **TALOS Systems** — киберпанковский автономный AI-агент для защиты mETH vault с auto-liquidation и advanced risk management на Mantle.
+
+Ссылка на репозиторий: https://github.com/Artem1981777/talos-systems
+
+### Задача:
+Продолжай разработку проекта поверх текущего состояния. Сделай его конкурентоспособным для топ-3 призового фонда.
+
+### Ключевые цели проекта:
+- Максимальная демонстрация **агентности** и автономности
+- Глубокая интеграция фич Mantle (on-chain benchmarking, ERC-8004 Agent Identity)
+- Радикальная прозрачность всех решений агента
+- Премиум киберпанковский UX/UI, который вызывает вау-эффект у судей
+
+### Текущий стек и что нужно прокачать:
+- Frontend: улучшить до Next.js 15 (App Router) + TypeScript + Tailwind + shadcn/ui + Aceternity/Magic UI + Framer Motion
+- AI Agent: перевести на **LangGraph** (stateful workflows) + self-reflection + memory
+- On-chain: обязательная интеграция **ERC-8004 Agent Identity NFT**
+- Transparency: Live Transaction Log + Agent Decision History (on-chain + UI)
+- Дополнительно: Account Abstraction, Gelato/Automate для автономных транзакций, Telegram-уведомления
+
+### Твои действия прямо сейчас:
+1. Внимательно проанализируй всю структуру проекта (файлы, папки, код агента, дашборд, Python-скрипты, smart contracts). Подтверди, что ты находишься в правильно импортированном проекте.
+2. Оцени текущий уровень и скажи, что уже хорошо, а что критически нужно улучшить.
+3. Подключи **реальный Mantle Sepolia RPC**, чтобы дашборд показывал live данные (mETH price, vault health factor, collateral и т.д.) вместо симуляции.
+4. Предложи **чёткий приоритизированный план разработки** на ближайшие этапы (по impact/time).
+
+Будь максимально амбициозным, используй самые современные технологии 2026 года. Думай как разработчик, который хочет выиграть хакатон.
+
+Начинай анализ проекта.
