@@ -1,0 +1,395 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: TALOS System API - AI Agent on Mantle Network
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: agent
+    description: AI Agent operations
+  - name: vault
+    description: Vault & RWA data
+  - name: decisions
+    description: Agent decision log
+  - name: protocols
+    description: DeFi protocol data
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /agent/status:
+    get:
+      operationId: getAgentStatus
+      tags: [agent]
+      summary: Get current AI agent status
+      responses:
+        "200":
+          description: Agent status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentStatus"
+    patch:
+      operationId: updateAgentStatus
+      tags: [agent]
+      summary: Start or pause the agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAgentStatusInput"
+      responses:
+        "200":
+          description: Updated agent status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentStatus"
+
+  /agent/identity:
+    get:
+      operationId: getAgentIdentity
+      tags: [agent]
+      summary: Get ERC-8004 NFT agent identity
+      responses:
+        "200":
+          description: Agent NFT identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentIdentity"
+
+  /agent/think:
+    post:
+      operationId: triggerAgentThink
+      tags: [agent]
+      summary: Trigger one agent reasoning cycle
+      responses:
+        "200":
+          description: Agent reasoning result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentThought"
+
+  /vault/stats:
+    get:
+      operationId: getVaultStats
+      tags: [vault]
+      summary: Get vault stats (balance, health factor, price)
+      responses:
+        "200":
+          description: Vault statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VaultStats"
+
+  /decisions:
+    get:
+      operationId: listDecisions
+      tags: [decisions]
+      summary: List all agent decisions (on-chain log)
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of decisions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionList"
+    post:
+      operationId: createDecision
+      tags: [decisions]
+      summary: Record a new agent decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDecisionInput"
+      responses:
+        "201":
+          description: Created decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+
+  /decisions/summary:
+    get:
+      operationId: getDecisionsSummary
+      tags: [decisions]
+      summary: Get aggregated decision stats (wins, losses, total ROI)
+      responses:
+        "200":
+          description: Decision summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionsSummary"
+
+  /protocols:
+    get:
+      operationId: listProtocols
+      tags: [protocols]
+      summary: Get live APY data from Mantle DeFi protocols
+      responses:
+        "200":
+          description: Protocol list with APY
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtocolList"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    AgentStatus:
+      type: object
+      properties:
+        id:
+          type: string
+        isRunning:
+          type: boolean
+        mode:
+          type: string
+          enum: [autonomous, paused, simulation]
+        lastCycleAt:
+          type: string
+          nullable: true
+        totalDecisions:
+          type: integer
+        totalRoiPercent:
+          type: number
+        nftTokenId:
+          type: string
+          nullable: true
+        reputationScore:
+          type: integer
+      required: [id, isRunning, mode, totalDecisions, totalRoiPercent, reputationScore]
+
+    UpdateAgentStatusInput:
+      type: object
+      properties:
+        isRunning:
+          type: boolean
+        mode:
+          type: string
+          enum: [autonomous, paused, simulation]
+      required: []
+
+    AgentIdentity:
+      type: object
+      properties:
+        tokenId:
+          type: string
+        agentAddress:
+          type: string
+        name:
+          type: string
+        reputationScore:
+          type: integer
+        totalDecisions:
+          type: integer
+        totalRoiPercent:
+          type: number
+        createdAt:
+          type: string
+        network:
+          type: string
+        contractAddress:
+          type: string
+      required: [tokenId, agentAddress, name, reputationScore, totalDecisions, totalRoiPercent, createdAt, network, contractAddress]
+
+    AgentThought:
+      type: object
+      properties:
+        id:
+          type: string
+        reasoning:
+          type: string
+        action:
+          type: string
+        confidence:
+          type: number
+        expectedRoi:
+          type: number
+        createdAt:
+          type: string
+      required: [id, reasoning, action, confidence, expectedRoi, createdAt]
+
+    VaultStats:
+      type: object
+      properties:
+        totalAssets:
+          type: string
+        healthFactor:
+          type: number
+        ethPrice:
+          type: string
+        mEthPrice:
+          type: string
+        collateralUsd:
+          type: number
+        debtUsd:
+          type: number
+        apy:
+          type: number
+        network:
+          type: string
+        blockNumber:
+          type: integer
+        lastUpdated:
+          type: string
+      required: [totalAssets, healthFactor, ethPrice, mEthPrice, collateralUsd, debtUsd, apy, network, blockNumber, lastUpdated]
+
+    Decision:
+      type: object
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        protocol:
+          type: string
+        amount:
+          type: string
+        reasoning:
+          type: string
+        chainOfThought:
+          type: string
+        confidence:
+          type: number
+        expectedRoi:
+          type: number
+        actualRoi:
+          type: number
+          nullable: true
+        txHash:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, executed, failed, simulated]
+        createdAt:
+          type: string
+        executedAt:
+          type: string
+          nullable: true
+      required: [id, action, protocol, amount, reasoning, chainOfThought, confidence, expectedRoi, status, createdAt]
+
+    CreateDecisionInput:
+      type: object
+      properties:
+        action:
+          type: string
+        protocol:
+          type: string
+        amount:
+          type: string
+        reasoning:
+          type: string
+        chainOfThought:
+          type: string
+        confidence:
+          type: number
+        expectedRoi:
+          type: number
+        txHash:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, executed, failed, simulated]
+      required: [action, protocol, amount, reasoning, chainOfThought, confidence, expectedRoi, status]
+
+    DecisionList:
+      type: object
+      properties:
+        decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Decision"
+        total:
+          type: integer
+      required: [decisions, total]
+
+    DecisionsSummary:
+      type: object
+      properties:
+        totalDecisions:
+          type: integer
+        executedDecisions:
+          type: integer
+        simulatedDecisions:
+          type: integer
+        totalRoiPercent:
+          type: number
+        avgConfidence:
+          type: number
+        topProtocol:
+          type: string
+        reputationScore:
+          type: integer
+      required: [totalDecisions, executedDecisions, simulatedDecisions, totalRoiPercent, avgConfidence, topProtocol, reputationScore]
+
+    Protocol:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        apy:
+          type: number
+        tvl:
+          type: string
+        asset:
+          type: string
+        risk:
+          type: string
+          enum: [low, medium, high]
+        recommended:
+          type: boolean
+      required: [id, name, apy, tvl, asset, risk, recommended]
+
+    ProtocolList:
+      type: object
+      properties:
+        protocols:
+          type: array
+          items:
+            $ref: "#/components/schemas/Protocol"
+      required: [protocols]
