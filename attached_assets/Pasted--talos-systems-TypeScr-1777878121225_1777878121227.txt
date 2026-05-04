@@ -1,0 +1,83 @@
+## 🔍 ЭКСПЕРТНЫЙ АНАЛИЗ: talos-systems
+
+### 📊 Общая картина (на основе структуры репСтек:к: TypeScript (95.6%) + CSS + JS, pnpm workspace (монорепо), Replit-среда, Vercel деплоСтруктура монорепо:о:
+/artifacts    — артефакты сборки / AI-generated outputs
+/attached_assets — статические ресурсы
+/lib          — shared библиотеки
+/scripts      — build/deploy скрипты
+---
+
+### 🔴 КРИТИЧЕСКИЕ ПРОБЛЕ1. Архитектура — монолит без разделенияия**
+Структура /lib без явных пакетов (packages/) говорит о том, что монорепо настроено формально, но реально не используется как workspace с независимыми модулями. Это антипаттерн — нет изоляции зависимостей, нет независимого деплоя компоненто2. Отсутствие CI/CD и тестовов**
+0 GitHub Actions, 0 Issues, 0 Pull Requests — это red flag для судей любого хакатона. Нет автоматической проверки качества код3. Replit как продакшн-средада**
+.replit файл в корне означает, что проект разрабатывался в Replit, но деплоится на Vercel. Это создаёт конфликт окружений: env variables, пути, Node.js версии.
+
+**4. pnpm-lock.yaml + .npmrc конфликт**
+Наличие обоих говорит о борьбе с зависимостями. Твой паттерн legacy-peer-deps=true работает, но это технический долг — это значит зависимости несовместимы по версиям.
+
+---
+
+### 🟡 СРЕДНИЕ ПР5. Нет READMEREADME**
+Репо без описания — это мгновенный минус от жюри хакатона. Нет контекста что это за проект, для чего, архитектура.
+
+**6. /attached_assets — антипаттерн**
+Статические ассеты должны быть в public/ или через CDN. Папка attached_assets — это Replit-специфичное решение, которое не масшт7. 14 коммитов без структуры структуры**
+Судя по истории — коммиты не следуют Conventional Commits (feat:, fix:, chore:). Для хакатона это минус при code review.
+
+---
+
+### 🟢 СИЛЬНЫЕ СТОРОНЫ
+
+- TypeScript 95.6% — отличное покрытие типами
+- pnpm workspace — правильное направление для монорепо
+- Vercel деплой настроен (talos-systems.vercel.app)
+- tsconfig.base.json — shared конфиг, профессиональный подход
+
+---
+
+### 💎 РЕЙТИНГ
+
+| Критерий | Оценка |
+|---|---|
+| Архитектура | 5/10 |
+| Код качество | 7/10 |
+| DevOps/CI/CD | 2/10 |
+| Документация | 1/10 |
+| ИнфраструктураИтого
+| 3.8/103.8/10** |
+
+---
+
+## 🚀 ПРОМТ ДЛЯ REPLIT AGENT
+
+Вот промт высшего класса — скопируй и вставь в Replit Agent:
+
+---
+
+You are a senior full-stack architect. Upgrade the existing `talos-systems` TypeScript monorepo to a production-grade, enterprise-level infrastructure. Here is the complete upgrade specification:
+
+## PROJECT CONTEXT
+This is a TypeScript monorepo (pnpm workspaces) with an AI/Web3 focus. Current structure has /artifacts, /lib, /scripts, /attached_assets directories. Deploy target: Vercel.
+
+## PHASE 1: MONOREPO RESTRUCTURING
+Transform the flat monorepo into proper workspace packages:
+talos-systems/
+├── apps/
+│   ├── web/          # Next.js 14 App Router frontend
+│   └── api/          # Hono.js API server (edge-compatible)
+├── packages/
+│   ├── ui/           # shadcn/ui component library
+│   ├── core/         # shared business logic
+│   ├── ai/           # AI agent orchestration layer
+│   └── contracts/    # Web3 contract ABIs & hooks
+├── scripts/
+├── .github/
+│   └── workflows/
+└── turbo.json        # Turborepo config
+
+
+Install and configure:
+- turbo for build orchestration (replace plain pnpm scripts)
+- @turbo/gen` for code generation
+
+## PHASE 2: FRONTEND — Next.js 14 + App Router

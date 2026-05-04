@@ -1,0 +1,29 @@
+name: Deploy Health Check
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  health:
+    name: Production Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check frontend
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://talos-systems--gromovartem722.replit.app/)
+          echo "Frontend status: $STATUS"
+          [ "$STATUS" = "200" ] || exit 1
+
+      - name: Check API health
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://talos-systems--gromovartem722.replit.app/api/healthz)
+          echo "API status: $STATUS"
+          [ "$STATUS" = "200" ] || exit 1
+
+      - name: Check vault stats
+        run: |
+          RESPONSE=$(curl -s https://talos-systems--gromovartem722.replit.app/api/vault/stats)
+          echo "Vault response: $RESPONSE"
+          echo "$RESPONSE" | grep -q "healthFactor" || exit 1

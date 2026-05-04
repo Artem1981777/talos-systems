@@ -1,0 +1,5 @@
+node_modules
+dist
+.replit-artifact
+attached_assets
+pnpm-lock.yaml
