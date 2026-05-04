@@ -4,7 +4,7 @@ import { agentStateTable, decisionsTable } from "@workspace/db";
 import { UpdateAgentStatusBody } from "@workspace/api-zod";
 import { readChainData, getEthPrice, computeVaultPosition, VAULT_ADDRESS } from "../lib/chain.js";
 import { syncOnChainEvents } from "../lib/eventSync.js";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import Anthropic from "@anthropic-ai/sdk";
 
 const router = Router();
 
@@ -144,16 +144,17 @@ ALLOCATION_PCT: [0-50, integer]`;
   let allocationPct = 40;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
-      max_completion_tokens: 1024,
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const completion = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1024,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "";
+    const raw = completion.content[0]?.type === "text" ? completion.content[0].text : "";
 
     // Parse structured response
     reasoning = raw;
