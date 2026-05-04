@@ -1,0 +1,11 @@
+run = "pnpm run dev"
+entrypoint = "artifacts/talos/src/main.tsx"
+
+[env]
+ANTHROPIC_API_KEY = ""
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "pnpm run dev"]
