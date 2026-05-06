@@ -8,7 +8,26 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const router = Router();
 
-// GET /agent/status
+// ─── Rate limiting: shared pool 5 req/IP/day ─────────────────────────────────
+const ipRateMap = new Map<string, { count: number; resetAt: number }>();
+const SHARED_LIMIT = 5;
+const DAY_MS = 86_400_000;
+
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const entry = ipRateMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    ipRateMap.set(ip, { count: 1, resetAt: now + DAY_MS });
+    return { allowed: true, remaining: SHARED_LIMIT - 1 };
+  }
+  if (entry.count >= SHARED_LIMIT) {
+    return { allowed: false, remaining: 0 };
+  }
+  entry.count++;
+  return { allowed: true, remaining: SHARED_LIMIT - entry.count };
+}
+
+// ─── GET /agent/status ────────────────────────────────────────────────────────
 router.get("/agent/status", async (req, res) => {
   let state = await db.select().from(agentStateTable).limit(1);
   if (state.length === 0) {
@@ -31,23 +50,18 @@ router.get("/agent/status", async (req, res) => {
   });
 });
 
-// PATCH /agent/status
+// ─── PATCH /agent/status ──────────────────────────────────────────────────────
 router.patch("/agent/status", async (req, res) => {
   const parsed = UpdateAgentStatusBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error });
-    return;
-  }
+  if (!parsed.success) { res.status(400).json({ error: parsed.error }); return; }
   const { isRunning, mode } = parsed.data;
   const update: Record<string, unknown> = { updatedAt: new Date() };
   if (isRunning !== undefined) update.isRunning = isRunning;
   if (mode !== undefined) update.mode = mode;
-
   const existing = await db.select().from(agentStateTable).limit(1);
   if (existing.length === 0) {
     await db.insert(agentStateTable).values({ isRunning: false, mode: "paused" });
   }
-
   const updated = await db.update(agentStateTable).set(update).returning();
   const s = updated[0];
   res.json({
@@ -62,7 +76,7 @@ router.patch("/agent/status", async (req, res) => {
   });
 });
 
-// GET /agent/identity
+// ─── GET /agent/identity ──────────────────────────────────────────────────────
 router.get("/agent/identity", async (req, res) => {
   const state = await db.select().from(agentStateTable).limit(1);
   const s = state[0];
@@ -79,8 +93,12 @@ router.get("/agent/identity", async (req, res) => {
   });
 });
 
-// POST /agent/think — real on-chain data + GPT-5 reasoning
-router.post("/agent/think", async (_req, res) => {
+// ─── POST /agent/think — Claude reasoning with user-key or shared pool ────────
+router.post("/agent/think", async (req, res) => {
+  const userKey = req.headers["x-anthropic-key"] as string | undefined;
+  const demoMode = req.headers["x-demo-mode"] === "true";
+  const clientIp = (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() ?? req.socket.remoteAddress ?? "unknown";
+
   const [chain, ethPrice] = await Promise.all([readChainData(), getEthPrice()]);
   const vault = computeVaultPosition(chain.totalSupplyMeth, ethPrice);
 
@@ -92,15 +110,31 @@ router.post("/agent/think", async (_req, res) => {
     { name: "Ondo USDY", apy: 5.35, risk: "low", tvl: "$210.0M" },
   ];
 
+  const now = new Date();
+  const marketSentiment = ethPrice > 2500 ? "BULLISH" : ethPrice > 2000 ? "NEUTRAL" : "BEARISH";
+  const riskScore = Math.round(
+    (1 / vault.healthFactor) * 40 +
+    (vault.debtUsd / vault.collateralUsd) * 30 +
+    (marketSentiment === "BEARISH" ? 20 : marketSentiment === "NEUTRAL" ? 10 : 5)
+  );
+
   const systemPrompt = `You are TALOS-Alpha-001, an autonomous AI agent running on Mantle Network with ERC-8004 Agent Identity NFT token #0x001. You protect and optimize a mETH (Mantle ETH) yield vault.
 
-Your role: Analyze real on-chain vault metrics and make a precise risk management + yield optimization decision. You think step by step like a professional DeFi risk manager combined with a quant trader.
+Your role: Analyze real on-chain vault metrics and make a precise risk management + yield optimization decision. You think step-by-step like a professional DeFi risk manager combined with a quant trader.
 
-Style: Terse, precise, cyberpunk. Use technical DeFi terminology. Structure your response with clear labeled sections: OBSERVATION, RISK_ASSESSMENT, THOUGHT, ACTION. No fluff.`;
+Context:
+- Current date/time: ${now.toUTCString()}
+- You run as part of a multi-agent consensus system with WATCHER, VALIDATOR, and EXECUTOR sub-agents
+- Your decision is validated by the consensus committee before execution
+- Risk score 0-100: 0 = no risk, 100 = imminent liquidation
+
+Style: Terse, precise, cyberpunk. Use technical DeFi terminology. No fluff.`;
 
   const userPrompt = `LIVE CHAIN DATA — Mantle Sepolia — Block #${chain.blockNumber}
+TIMESTAMP: ${now.toUTCString()}
 RPC_STATUS: ${chain.rpcOk ? "LIVE" : "FALLBACK"}
-TIMESTAMP: ${new Date().toUTCString()}
+MARKET_SENTIMENT: ${marketSentiment}
+RISK_SCORE: ${riskScore}/100
 
 VAULT METRICS:
   mETH_SUPPLY (on-chain): ${vault.totalAssets} mETH
@@ -116,26 +150,29 @@ VAULT METRICS:
 AVAILABLE PROTOCOLS:
 ${protocols.map((p, i) => `  ${i + 1}. ${p.name} — ${p.apy}% APY — ${p.risk.toUpperCase()} risk — TVL: ${p.tvl}`).join("\n")}
 
-Your ERC-8004 identity is on-chain at contract ${VAULT_ADDRESS} on Mantle Sepolia.
+Agent ERC-8004 identity: ${VAULT_ADDRESS} on Mantle Sepolia.
 
-Make a decision. Structure your response EXACTLY as:
+Structure your response EXACTLY as:
 
 OBSERVATION:
-[2-3 sentences analyzing the on-chain data]
+[2-3 sentences analyzing on-chain data and market context]
 
 RISK_ASSESSMENT:
-[1-2 sentences on vault safety and threat level]
+[1-2 sentences on vault safety. Include RISK_SCORE: ${riskScore}/100]
 
 THOUGHT:
-[2-3 sentences of reasoning about the optimal strategy]
+[2-3 sentences of reasoning about optimal strategy given current conditions]
+
+NEXT_ACTION:
+[2-3 specific steps the agent should take in order]
 
 ACTION: [EXACT action string, e.g. "ALLOCATE 40% → Merchant Moe @ 8.4% APY"]
 
-CONFIDENCE: [0.70-0.97, one decimal]
+CONFIDENCE: [0.70-0.97]
 
 PROTOCOL: [exact protocol name]
 
-ALLOCATION_PCT: [0-50, integer]`;
+ALLOCATION_PCT: [0-50]`;
 
   let reasoning = "";
   let action = "";
@@ -143,70 +180,92 @@ ALLOCATION_PCT: [0-50, integer]`;
   let bestProtocol = protocols[0];
   let allocationPct = 40;
 
-  try {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const completion = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    });
+  const useSharedPool = !userKey && !demoMode;
 
-    const raw = completion.content[0]?.type === "text" ? completion.content[0].text : "";
-
-    // Parse structured response
-    reasoning = raw;
-
-    const actionMatch = raw.match(/ACTION:\s*(.+)/);
-    if (actionMatch) action = actionMatch[1].trim();
-
-    const confMatch = raw.match(/CONFIDENCE:\s*([\d.]+)/);
-    if (confMatch) confidence = parseFloat(confMatch[1]);
-
-    const protocolMatch = raw.match(/PROTOCOL:\s*(.+)/);
-    if (protocolMatch) {
-      const pName = protocolMatch[1].trim();
-      const found = protocols.find((p) => p.name.toLowerCase().includes(pName.toLowerCase().split(" ")[0]));
-      if (found) bestProtocol = found;
+  if (useSharedPool) {
+    const rl = checkRateLimit(clientIp);
+    res.setHeader("X-RateLimit-Remaining", String(rl.remaining));
+    res.setHeader("X-RateLimit-Limit", String(SHARED_LIMIT));
+    if (!rl.allowed) {
+      res.status(429).json({
+        error: "RATE_LIMIT_EXCEEDED",
+        message: "Shared pool limit reached (5 req/day). Use MY_KEY mode for unlimited access.",
+        remaining: 0,
+      });
+      return;
     }
+  }
 
-    const allocMatch = raw.match(/ALLOCATION_PCT:\s*(\d+)/);
-    if (allocMatch) allocationPct = parseInt(allocMatch[1]);
-  } catch (err) {
-    // Fallback to deterministic if LLM fails
+  if (!demoMode) {
+    try {
+      const apiKey = userKey ?? process.env.ANTHROPIC_API_KEY;
+      const anthropic = new Anthropic({ apiKey });
+      const completion = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        messages: [
+          { role: "user", content: `${systemPrompt}\n\n${userPrompt}` },
+        ],
+      });
+
+      const raw = completion.content[0]?.type === "text" ? completion.content[0].text : "";
+      reasoning = raw;
+
+      const actionMatch = raw.match(/ACTION:\s*(.+)/);
+      if (actionMatch) action = actionMatch[1].trim();
+
+      const confMatch = raw.match(/CONFIDENCE:\s*([\d.]+)/);
+      if (confMatch) confidence = parseFloat(confMatch[1]);
+
+      const protocolMatch = raw.match(/PROTOCOL:\s*(.+)/);
+      if (protocolMatch) {
+        const pName = protocolMatch[1].trim();
+        const found = protocols.find((p) => p.name.toLowerCase().includes(pName.toLowerCase().split(" ")[0]));
+        if (found) bestProtocol = found;
+      }
+
+      const allocMatch = raw.match(/ALLOCATION_PCT:\s*(\d+)/);
+      if (allocMatch) allocationPct = parseInt(allocMatch[1]);
+    } catch {
+      demoFallback();
+    }
+  } else {
+    demoFallback();
+  }
+
+  function demoFallback() {
     const hf = vault.healthFactor;
     if (hf < 1.2) {
       bestProtocol = protocols[3];
       allocationPct = 0;
       action = `DE-RISK: Repay debt via ${bestProtocol.name}`;
-      reasoning = `CRITICAL_ALERT: Health factor ${hf.toFixed(4)} — approaching liquidation.\n\nOBSERVATION:\n  ETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}\n\nRISK_ASSESSMENT:\n  CRITICAL — HF below 1.2. Immediate de-risking required.\n\nTHOUGHT:\n  Market downturn compressing collateral. Redirect yield to debt repayment.\n\nACTION: ${action}`;
+      reasoning = `OBSERVATION:\nETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}. Risk score ${riskScore}/100 — critical threshold.\n\nRISK_ASSESSMENT:\nCRITICAL — HF ${hf.toFixed(4)} approaching liquidation. RISK_SCORE: ${riskScore}/100.\n\nTHOUGHT:\nMarket downturn compressing collateral value. Immediate de-risking mandatory to prevent liquidation cascade.\n\nNEXT_ACTION:\n1. Halt all new allocations immediately\n2. Redirect all yield to debt repayment\n3. Monitor HF every 5 minutes until > 1.5\n\nACTION: ${action}`;
       confidence = 0.97;
     } else if (hf < 1.5) {
       bestProtocol = protocols[0];
       allocationPct = 25;
       action = `ALLOCATE 25% → ${bestProtocol.name} @ ${bestProtocol.apy}% APY`;
-      reasoning = `CAUTION: Health factor ${hf.toFixed(4)} — elevated risk.\n\nOBSERVATION:\n  ETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}\n\nRISK_ASSESSMENT:\n  CAUTION — HF between 1.1-1.5. Conservative allocation advised.\n\nTHOUGHT:\n  Preserve capital buffer. Low-risk strategy maintains safety margin.\n\nACTION: ${action}`;
+      reasoning = `OBSERVATION:\nETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}. Market: ${marketSentiment}.\n\nRISK_ASSESSMENT:\nCAUTION — HF ${hf.toFixed(4)} elevated risk zone. RISK_SCORE: ${riskScore}/100.\n\nTHOUGHT:\nConservative allocation preserves buffer. Low-risk strategy maintains safety margin while generating yield.\n\nNEXT_ACTION:\n1. Allocate 25% to ${bestProtocol.name}\n2. Set HF alert at 1.3\n3. Review in next cycle\n\nACTION: ${action}`;
       confidence = 0.82;
     } else {
       const highYield = protocols.reduce((a, b) => (a.apy > b.apy ? a : b));
       bestProtocol = highYield;
       allocationPct = 40;
       action = `ALLOCATE 40% → ${bestProtocol.name} @ ${bestProtocol.apy}% APY`;
-      reasoning = `OPTIMAL: Health factor ${hf.toFixed(4)} — vault in strong position.\n\nOBSERVATION:\n  ETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}\n\nRISK_ASSESSMENT:\n  SAFE — HF > 1.5. Sufficient buffer for yield optimization.\n\nTHOUGHT:\n  ${highYield.name} offers highest risk-adjusted return at ${highYield.apy}% APY.\n\nACTION: ${action}`;
+      reasoning = `OBSERVATION:\nETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}. Market: ${marketSentiment}. Risk score ${riskScore}/100.\n\nRISK_ASSESSMENT:\nSAFE — HF ${hf.toFixed(4)} strong buffer. RISK_SCORE: ${riskScore}/100. Sufficient headroom for yield optimization.\n\nTHOUGHT:\n${highYield.name} offers best risk-adjusted return at ${highYield.apy}% APY with ${highYield.risk} risk profile.\n\nNEXT_ACTION:\n1. Allocate 40% to ${highYield.name}\n2. Monitor HF for any degradation\n3. Rebalance if HF drops below 1.8\n\nACTION: ${action}`;
       confidence = 0.88;
     }
   }
 
   const expectedRoi = bestProtocol.apy / 100;
-
   const thought = {
     id: `think-${Date.now()}`,
     reasoning,
     action: action || `ALLOCATE ${allocationPct}% → ${bestProtocol.name} @ ${bestProtocol.apy}% APY`,
     confidence,
     expectedRoi,
+    riskScore,
+    marketSentiment,
     createdAt: new Date().toISOString(),
   };
 
@@ -216,7 +275,7 @@ ALLOCATION_PCT: [0-50, integer]`;
     amount: allocationPct > 0
       ? `${(parseFloat(vault.totalAssets) * allocationPct / 100).toFixed(4)} mETH`
       : "full rebalance",
-    reasoning: `HF ${vault.healthFactor} | ETH $${vault.ethPrice} | Block #${chain.blockNumber}`,
+    reasoning: `HF ${vault.healthFactor} | ETH $${vault.ethPrice} | Block #${chain.blockNumber} | Risk ${riskScore}/100`,
     chainOfThought: reasoning,
     confidence,
     expectedRoi,
@@ -238,13 +297,13 @@ ALLOCATION_PCT: [0-50, integer]`;
   res.json(thought);
 });
 
-// POST /agent/sync — pull on-chain Transfer events into decisions table
+// ─── POST /agent/sync ─────────────────────────────────────────────────────────
 router.post("/agent/sync", async (req, res) => {
   const result = await syncOnChainEvents();
   res.json({ ...result, message: `Synced ${result.synced} new on-chain events, skipped ${result.skipped} duplicates` });
 });
 
-// GET /agent/stream — SSE stream for real-time on-chain event notifications
+// ─── GET /agent/stream ────────────────────────────────────────────────────────
 router.get("/agent/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -258,25 +317,15 @@ router.get("/agent/stream", (req, res) => {
 
   send("connected", { ts: Date.now(), message: "TALOS event stream active" });
 
-  const heartbeatInterval = setInterval(() => {
-    send("heartbeat", { ts: Date.now() });
-  }, 15_000);
-
+  const heartbeatInterval = setInterval(() => send("heartbeat", { ts: Date.now() }), 15_000);
   const syncInterval = setInterval(async () => {
     try {
       const result = await syncOnChainEvents();
-      if (result.synced > 0) {
-        send("new_decisions", { count: result.synced, ts: Date.now() });
-      }
-    } catch {
-      // Non-fatal
-    }
+      if (result.synced > 0) send("new_decisions", { count: result.synced, ts: Date.now() });
+    } catch { /* non-fatal */ }
   }, 45_000);
 
-  req.on("close", () => {
-    clearInterval(heartbeatInterval);
-    clearInterval(syncInterval);
-  });
+  req.on("close", () => { clearInterval(heartbeatInterval); clearInterval(syncInterval); });
 });
 
 export default router;

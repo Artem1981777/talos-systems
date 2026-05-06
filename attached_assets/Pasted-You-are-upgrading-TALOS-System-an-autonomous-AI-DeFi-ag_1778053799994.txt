@@ -1,0 +1,90 @@
+You are upgrading TALOS System - an autonomous AI DeFi agent on Mantle Network. Make all these improvements in one session:
+
+## 1. API KEY MODAL (Priority: Critical)
+Create `artifacts/talos/src/components/ApiKeyModal.tsx`:
+- Button in header showing current mode (SHARED/MY_KEY/DEMO)
+- Modal with 3 modes:
+  * SHARED_POOL - shared backend key, 5 req/day per IP, free
+  * MY_KEY - user's own Anthropic key (sk-ant-...), localStorage
+  * DEMO_MODE - deterministic fallback, no AI
+- Auto-opens on first visit
+- Key in localStorage "talos_anthropic_key", mode in "talos_ai_mode"
+
+In `artifacts/talos/src/components/Layout.tsx`:
+- Import and add <ApiKeyModal /> in header before AUTONOMOUS badge
+
+## 2. BACKEND: ACCEPT USER API KEY
+In `artifacts/api-server/src/routes/agent.ts`:
+- Read X-Anthropic-Key header
+- Use it instead of process.env.ANTHROPIC_API_KEY if present
+- Rate limit shared pool: 5 req/IP/day using in-memory Map
+- Return remaining quota in response headers: X-RateLimit-Remaining
+
+## 3. REPLACE GPT-5 LABEL WITH CLAUDE
+In `artifacts/talos/src/pages/Dashboard.tsx`:
+- Change "GPT-5 CHAIN_OF_THOUGHT" → "CLAUDE CHAIN_OF_THOUGHT"
+- Change "GPT-5_REASONING_ENABLED" → "CLAUDE_REASONING_ENABLED"
+- Change "LIVE_AI" badge color to violet/purple (Claude brand color)
+
+## 4. MULTI-AGENT VISUALIZATION
+Add to Dashboard a new section "// MULTI_AGENT_CONSENSUS":
+- Show 3 agents: WATCHER, VALIDATOR, EXECUTOR
+- Each with status indicator (ACTIVE/IDLE/THINKING)
+- Show consensus vote: 2/3 APPROVED or 1/3 DISSENT
+- Animate agents when thinking (pulse effect)
+- Use cyberpunk styling consistent with existing UI
+
+## 5. REAL-TIME NOTIFICATIONS
+Add toast notification system:
+- When agent completes cycle: show action taken
+- When HF drops below 1.5: show WARNING toast in amber
+- When HF drops below 1.2: show CRITICAL toast in red with pulse
+- Use sonner library for toasts
+- Cyberpunk styling: monospace font, dark background
+
+## 6. WALLET CONNECT BUTTON
+Add to header a "CONNECT_WALLET" button:
+- Use @web3modal/wagmi or RainbowKit
+- Support MetaMask and WalletConnect
+- Show truncated address when connected: "0xfe12...f4f7"
+- On connect: update agent identity with real wallet address
+- Cyberpunk styling consistent with header
+
+## 7. IMPROVE AGENT SYSTEM PROMPT
+In `artifacts/api-server/src/routes/agent.ts`, update systemPrompt:
+- Add current date and time to context
+- Add market sentiment analysis section
+- Add risk score (0-100) to response format
+- Add NEXT_ACTION field with specific steps
+- Make reasoning more detailed and structured
+
+## 8. PERFORMANCE METRICS PAGE
+Add new page `artifacts/talos/src/pages/Analytics.tsx`:
+- ROI chart over time (line chart with Recharts)
+- Decision distribution pie chart (ALLOCATE/DE-RISK/HOLD)
+- Confidence score history
+- Protocol usage bar chart
+- Agent uptime counter
+Add to navigation in Layout.tsx
+
+## 9. EXPORT & SHARE
+Add to Decisions page:
+- Export decisions to CSV button
+- Share button that copies shareable link with agent stats
+- Print-friendly view
+
+## 10. MOBILE RESPONSIVE
+Fix mobile layout:
+- Collapsible sidebar on mobile (hamburger menu)
+- Stack vault metrics 2x2 on mobile
+- Make charts full-width on mobile
+- Bottom navigation bar on mobile instead of sidebar
+
+## TECHNICAL REQUIREMENTS:
+- TypeScript strict mode, no `any` types
+- All new components follow existing cyberpunk design system
+- JetBrains Mono font for all text
+- Framer Motion for all animations
+- Dark theme only
+- After all changes: run the dev server and confirm everything works
+- Commit with message: "feat: major infrastructure upgrade - multi-agent, wallet, analytics, mobile"

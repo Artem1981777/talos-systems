@@ -1,5 +1,6 @@
-run = "pnpm run dev"
+run = "cd artifacts/api-server && PORT=3000 pnpm run dev & cd /home/runner/workspace/artifacts/talos && PORT=3001 DATABASE_URL=postgresql://localhost/talos BASE_PATH=/ pnpm run dev"
 entrypoint = "artifacts/talos/src/main.tsx"
+modules = ["nodejs-20"]
 
 [env]
 ANTHROPIC_API_KEY = ""
@@ -9,3 +10,22 @@ channel = "stable-24_05"
 
 [deployment]
 run = ["sh", "-c", "pnpm run dev"]
+
+[[ports]]
+localPort = 3000
+externalPort = 80
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 22420
+externalPort = 3000
+
+[agent]
+expertMode = true

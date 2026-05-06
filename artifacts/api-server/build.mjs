@@ -38,6 +38,7 @@ async function buildAll() {
       "fsevents",
       "re2",
       "farmhash",
+      "@anthropic-ai/sdk",
       "xxhash-addon",
       "bufferutil",
       "utf-8-validate",

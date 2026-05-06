@@ -7,7 +7,7 @@ import {
   getGetDecisionsSummaryQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, ExternalLink, RefreshCw, Link2, Zap } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, RefreshCw, Link2, Zap, Download, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -252,6 +252,41 @@ export default function Decisions() {
   const limit = 10;
   const qc = useQueryClient();
 
+  const exportCsv = () => {
+    const decisions = data?.decisions ?? [];
+    if (decisions.length === 0) return;
+    const headers = ["ID", "Action", "Protocol", "Amount", "Status", "Confidence", "Expected ROI", "Created At", "TX Hash"];
+    const rows = decisions.map((d) => [
+      d.id,
+      `"${d.action}"`,
+      `"${d.protocol}"`,
+      `"${d.amount}"`,
+      d.status,
+      (d.confidence * 100).toFixed(1) + "%",
+      (d.expectedRoi * 100).toFixed(2) + "%",
+      new Date(d.createdAt).toISOString(),
+      d.txHash ?? "",
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `talos-decisions-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shareStats = () => {
+    const url = `${window.location.origin}/?agent=TALOS-Alpha-001&decisions=${summary?.totalDecisions ?? 0}&roi=${(summary?.totalRoiPercent ?? 0).toFixed(2)}&conf=${((summary?.avgConfidence ?? 0) * 100).toFixed(0)}`;
+    navigator.clipboard.writeText(url).then(() => {
+      const toast = document.createElement("div");
+      toast.textContent = "Link copied!";
+      document.body.appendChild(toast);
+      setTimeout(() => document.body.removeChild(toast), 2000);
+    });
+  };
+
   const { data, isLoading } = useListDecisions(
     { limit, offset: page * limit },
     { query: { refetchInterval: 30000, queryKey: getListDecisionsQueryKey({ limit, offset: page * limit }) } }
@@ -330,7 +365,7 @@ export default function Decisions() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {summary && (
             <>
               <div className="text-right hidden sm:block">
@@ -347,6 +382,22 @@ export default function Decisions() {
               </div>
             </>
           )}
+          <button
+            onClick={exportCsv}
+            className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs border border-accent/30 text-accent hover:bg-accent/10 rounded transition-all"
+            title="Export to CSV"
+          >
+            <Download className="w-3 h-3" />
+            CSV
+          </button>
+          <button
+            onClick={shareStats}
+            className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs border border-border/50 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent rounded transition-all"
+            title="Copy share link"
+          >
+            <Share2 className="w-3 h-3" />
+            SHARE
+          </button>
           <button
             onClick={() => syncChain()}
             disabled={syncing}
