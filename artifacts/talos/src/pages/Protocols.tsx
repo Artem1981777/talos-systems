@@ -221,7 +221,7 @@ export default function Protocols() {
           transition={{ delay: 0.4 }}
           className="bg-primary/5 border border-primary/20 rounded p-4"
         >
-          <div className="font-mono text-[10px] text-primary/60 tracking-widest mb-2">// GPT-5_AI_RECOMMENDATION</div>
+          <div className="font-mono text-[10px] text-violet-400/70 tracking-widest mb-2">// CLAUDE_AI_RECOMMENDATION</div>
           <div className="flex items-start gap-3">
             <TrendingUp className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <div>

@@ -106,13 +106,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
       {/* Scanline overlay */}
       <div
-        className="pointer-events-none fixed inset-0 z-[100] opacity-[0.03]"
+        className="pointer-events-none fixed inset-0 z-[1] opacity-[0.03]"
         style={{ background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,100,0.15) 2px, rgba(0,255,100,0.15) 4px)" }}
       />
       {/* CRT vignette */}
       <div
-        className="pointer-events-none fixed inset-0 z-[99]"
-        style={{ background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%)" }}
+        className="pointer-events-none fixed inset-0 z-[1]"
+        style={{ background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%)" }}
       />
 
       {/* Top bar */}
