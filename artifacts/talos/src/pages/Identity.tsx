@@ -8,7 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import {
   Shield, ExternalLink, Star, Cpu, Zap, Lock, Globe, Award, TrendingUp,
-  Fingerprint,
+  Fingerprint, Sparkles,
 } from "lucide-react";
 
 function IdentityField({
@@ -273,6 +273,57 @@ export default function Identity() {
 
         {/* Bottom accent */}
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+      </motion.div>
+
+      {/* NFT Mint */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card border border-primary/25 rounded-lg p-5 space-y-4"
+      >
+        <div className="font-mono text-[10px] text-muted-foreground/50 tracking-widest">// MINT_AGENT_NFT</div>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-mono text-sm font-bold text-primary">TALOS GENESIS COLLECTION</div>
+            <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
+              Mint your agent identity as ERC-721 NFT on Mantle Sepolia
+            </div>
+          </div>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/nft/prepare-mint', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ walletAddress: '0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7' })
+                });
+                const data = await res.json();
+                alert(`NFT Ready! Token ID: ${data.tokenId}\nEst. Gas: ${data.estimatedGas}`);
+              } catch {
+                alert('Connect wallet first');
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded border border-primary/40 text-primary hover:bg-primary/10 font-mono text-xs transition-all"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            MINT_NFT
+          </motion.button>
+        </div>
+        <div className="flex gap-2">
+          {[
+            { label: "COLLECTION", value: "Genesis" },
+            { label: "CHAIN", value: "Mantle" },
+            { label: "STANDARD", value: "ERC-721" },
+            { label: "GAS", value: "~0.001 MNT" },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex-1 bg-background/50 rounded p-2 text-center">
+              <div className="font-mono text-[9px] text-muted-foreground/50">{label}</div>
+              <div className="font-mono text-[10px] font-bold text-primary">{value}</div>
+            </div>
+          ))}
+        </div>
       </motion.div>
 
       {/* Achievements */}
