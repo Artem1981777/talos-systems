@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd ../.. && npm install -g pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/talos build",
+  "outputDirectory": "dist",
+  "framework": null
+}
