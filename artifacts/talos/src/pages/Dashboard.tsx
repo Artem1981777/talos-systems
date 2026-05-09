@@ -434,7 +434,8 @@ export default function Dashboard() {
                 } catch {
                   await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x1389", chainName: "Mantle Sepolia", nativeCurrency: { name: "MNT", symbol: "MNT", decimals: 18 }, rpcUrls: ["https://rpc.sepolia.mantle.xyz"], blockExplorerUrls: ["https://explorer.sepolia.mantle.xyz"] }] });
                 }
-                const res = await fetch("/api/agent/prepare-tx", {
+                const apiBase = import.meta.env.VITE_API_URL || '';
+                const res = await fetch(apiBase + "/api/agent/prepare-tx", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ action: "ALLOCATE", protocol: "Merchant Moe", amount: "100", userAddress: accounts[0] })

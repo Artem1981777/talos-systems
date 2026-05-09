@@ -294,7 +294,8 @@ export default function Identity() {
             whileHover={{ scale: 1.02 }}
             onClick={async () => {
               try {
-                const res = await fetch('/api/nft/prepare-mint', {
+                const apiBase = import.meta.env.VITE_API_URL || '';
+                const res = await fetch(apiBase + '/api/nft/prepare-mint', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ walletAddress: '0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7' })

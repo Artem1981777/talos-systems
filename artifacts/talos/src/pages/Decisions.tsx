@@ -35,7 +35,8 @@ function useChainStream(onNewDecisions: (count: number) => void) {
 
     async function poll() {
       try {
-        const res = await fetch("/api/agent/sync", { method: "POST" });
+        const apiBase = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(apiBase + "/api/agent/sync", { method: "POST" });
         if (!res.ok) throw new Error("sync failed");
         const data: { synced: number } = await res.json();
         if (!destroyed) {
@@ -297,7 +298,8 @@ export default function Decisions() {
 
   const { mutate: syncChain, isPending: syncing } = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/agent/sync", { method: "POST" });
+      const apiBase = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(apiBase + "/api/agent/sync", { method: "POST" });
       return res.json() as Promise<{ synced: number }>;
     },
     onSuccess: (result) => {
