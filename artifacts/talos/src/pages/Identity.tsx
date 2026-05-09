@@ -313,18 +313,7 @@ export default function Identity() {
                   await provider.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x138B', chainName: 'Mantle Sepolia', nativeCurrency: { name: 'MNT', symbol: 'MNT', decimals: 18 }, rpcUrls: ['https://rpc.sepolia.mantle.xyz'], blockExplorerUrls: ['https://explorer.sepolia.mantle.xyz'] }] });
                 }
                 
-                const txHash = await provider.request({
-                  method: 'eth_sendTransaction',
-                  params: [{
-                    from: accounts[0],
-                    to: data.contractAddress,
-                    value: '0x0',
-                    data: '0x',
-                    gas: '0x30000',
-                  }]
-                });
-                
-                alert(`NFT Minted! Token ID: ${data.tokenId}\nTX: ${txHash}\nView: https://explorer.sepolia.mantle.xyz/tx/${txHash}`);
+                alert(`NFT Ready!\nToken ID: ${data.tokenId}\nNetwork: Mantle Sepolia\nWallet: ${accounts[0].slice(0,8)}...\n\nNFT contract deployment coming soon!`);
               } catch {
                 alert('Connect wallet first');
               }
