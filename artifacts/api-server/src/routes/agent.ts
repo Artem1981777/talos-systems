@@ -4,7 +4,7 @@ import { agentStateTable, decisionsTable } from "@workspace/db";
 import { UpdateAgentStatusBody } from "@workspace/api-zod";
 import { readChainData, getEthPrice, computeVaultPosition, VAULT_ADDRESS } from "../lib/chain.js";
 import { syncOnChainEvents } from "../lib/eventSync.js";
-import Anthropic from "@anthropic-ai/sdk";
+// Groq API via fetch
 
 const router = Router();
 
@@ -198,17 +198,18 @@ ALLOCATION_PCT: [0-50]`;
 
   if (!demoMode) {
     try {
-      const apiKey = userKey ?? process.env.ANTHROPIC_API_KEY;
-      const anthropic = new Anthropic({ apiKey });
-      const completion = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
-        messages: [
-          { role: "user", content: `${systemPrompt}\n\n${userPrompt}` },
-        ],
+      const apiKey = process.env.GROQ_API_KEY;
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 1024,
+          messages: [{ role: "user", content: `${systemPrompt}\n\n${userPrompt}` }]
+        })
       });
-
-      const raw = completion.content[0]?.type === "text" ? completion.content[0].text : "";
+      const groqData = await groqRes.json();
+      const raw = groqData.choices?.[0]?.message?.content ?? "";
       reasoning = raw;
 
       const actionMatch = raw.match(/ACTION:\s*(.+)/);
