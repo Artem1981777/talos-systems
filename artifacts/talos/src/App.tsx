@@ -1,4 +1,5 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
+import { setBaseUrl } from "@workspace/api-client-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,9 @@ import Identity from "@/pages/Identity";
 import Protocols from "@/pages/Protocols";
 import Analytics from "@/pages/Analytics";
 import NotFound from "@/pages/not-found";
+
+const apiUrl = import.meta.env.VITE_API_URL || "";
+if (apiUrl) setBaseUrl(apiUrl);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 5000 } },
