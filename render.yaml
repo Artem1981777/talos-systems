@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: talos-systems
+    runtime: node
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-server build
+    startCommand: pnpm --filter @workspace/db run push && pnpm --filter @workspace/api-server start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+  - type: static
+    name: talos-frontend
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm --filter @workspace/talos build
+    staticPublishPath: artifacts/talos/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://talos-systems.onrender.com
