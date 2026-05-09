@@ -423,6 +423,35 @@ export default function Dashboard() {
               <Zap className={`w-3 h-3 ${thinking ? "animate-pulse" : ""}`} />
               {thinking ? "THINKING..." : "RUN_CYCLE"}
             </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={async () => {
+                const eth = (window as any).ethereum;
+                if (!eth) { alert("Install MetaMask!"); return; }
+                const accounts = await eth.request({ method: "eth_requestAccounts" });
+                try {
+                  await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x1389" }] });
+                } catch {
+                  await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x1389", chainName: "Mantle Sepolia", nativeCurrency: { name: "MNT", symbol: "MNT", decimals: 18 }, rpcUrls: ["https://rpc.sepolia.mantle.xyz"], blockExplorerUrls: ["https://explorer.sepolia.mantle.xyz"] }] });
+                }
+                const res = await fetch("/api/agent/prepare-tx", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "ALLOCATE", protocol: "Merchant Moe", amount: "100", userAddress: accounts[0] })
+                });
+                const data = await res.json();
+                if (data.needsTx) {
+                  await eth.request({ method: "eth_sendTransaction", params: [data.tx] });
+                  alert("Transaction sent! " + data.description);
+                } else {
+                  alert(data.description);
+                }
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded font-mono text-xs border border-green-500/40 text-green-400 hover:bg-green-500/10 transition-all"
+            >
+              <CheckCircle className="w-3 h-3" />
+              EXECUTE
+            </motion.button>
           </div>
         </div>
       </div>
