@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm install -g pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/talos build",
+  "outputDirectory": "artifacts/talos/dist",
+  "framework": null,
+  "installCommand": "echo skip"
+}
