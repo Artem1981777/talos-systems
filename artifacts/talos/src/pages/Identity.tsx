@@ -301,7 +301,30 @@ export default function Identity() {
                   body: JSON.stringify({ walletAddress: '0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7' })
                 });
                 const data = await res.json();
-                alert(`NFT Ready! Token ID: ${data.tokenId}\nEst. Gas: ${data.estimatedGas}`);
+                
+                // Send real transaction via MetaMask/OKX
+                const provider = (window as any).okxwallet || (window as any).ethereum;
+                if (!provider) { alert('Install MetaMask or OKX Wallet!'); return; }
+                
+                const accounts = await provider.request({ method: 'eth_requestAccounts' });
+                try {
+                  await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x138B' }] });
+                } catch {
+                  await provider.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x138B', chainName: 'Mantle Sepolia', nativeCurrency: { name: 'MNT', symbol: 'MNT', decimals: 18 }, rpcUrls: ['https://rpc.sepolia.mantle.xyz'], blockExplorerUrls: ['https://explorer.sepolia.mantle.xyz'] }] });
+                }
+                
+                const txHash = await provider.request({
+                  method: 'eth_sendTransaction',
+                  params: [{
+                    from: accounts[0],
+                    to: data.contractAddress,
+                    value: '0x0',
+                    data: '0x',
+                    gas: '0x30000',
+                  }]
+                });
+                
+                alert(`NFT Minted! Token ID: ${data.tokenId}\nTX: ${txHash}\nView: https://explorer.sepolia.mantle.xyz/tx/${txHash}`);
               } catch {
                 alert('Connect wallet first');
               }
