@@ -314,18 +314,13 @@ export default function Identity() {
                 }
                 
                 const NFT_CONTRACT = "0x518f500e7d71e4325b92573ff5415b458808fb35";
-                const tokenURI = `https://talos-systems.onrender.com/api/nft/metadata/${data.tokenId}`;
-                const addrPadded = accounts[0].slice(2).padStart(64, "0");
-                const uriOffset = "0000000000000000000000000000000000000000000000000000000000000040";
-                const uriLen = tokenURI.length.toString(16).padStart(64, "0");
-                const uriHex = Buffer.from(tokenURI).toString("hex").padEnd(Math.ceil(tokenURI.length/32)*64, "0");
-                const mintData = "0xb077fe71" + addrPadded + uriOffset + uriLen + uriHex;
+                const mintData = "0x1249c58b";
                 
                 const txHash = await provider.request({
                   method: "eth_sendTransaction",
                   params: [{
                     from: accounts[0],
-                    to: NFT_CONTRACT,
+                    to: "0xc94da1ad1116fb6ab4ad7665351c1defec8b2de5",
                     value: "0x0",
                     data: mintData,
                     gas: "0x30000",
