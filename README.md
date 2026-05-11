@@ -131,3 +131,102 @@ cp .env.example .env
 # Fill in DATABASE_URL, GROQ_API_KEY
 pnpm --filter @workspace/api-server run dev
 pnpm --filter @workspace/talos run dev
+# TALOS Systems 🤖
+
+> **Tactical Autonomous Liquidation Operations System**
+
+**An autonomous AI agent that protects and optimizes DeFi vaults using real LLM reasoning on live on-chain data.**
+
+![TALOS Banner](https://github.com/Artem1981777/talos-systems/blob/main/attached_assets/banner.jpg?raw=true)
+
+**Live Demo:** [talos-systems-talos-awwf.vercel.app](https://talos-systems-talos-awwf.vercel.app)  
+**API:** [talos-systems.onrender.com](https://talos-systems.onrender.com)  
+**Network:** Mantle Sepolia Testnet
+
+---
+
+## What is TALOS?
+
+**TALOS** is a fully autonomous AI agent designed to protect and optimize an **mETH vault** on the Mantle Network.
+
+It operates in a continuous intelligent loop:
+
+**OBSERVE → ANALYZE → DECIDE → EXECUTE → REFLECT**
+
+Every 120 seconds the agent:
+- Reads real on-chain data from Mantle Sepolia
+- Runs deep chain-of-thought reasoning powered by **Groq + Llama-3.3-70b**
+- Makes decisions on rebalancing, liquidation protection, and yield optimization
+- Executes transactions on-chain
+- Logs its complete reasoning process to PostgreSQL
+
+---
+
+## ✨ Key Features
+
+- **Fully Autonomous Agent** — operates 24/7 without human intervention
+- **Live On-Chain Monitoring** — real-time mETH vault data via RPC
+- **LangGraph State Machine** — beautiful animated 5-step workflow visualization
+- **Multi-Agent System** — WATCHER + VALIDATOR + EXECUTOR agents
+- **On-Chain Identity** — ERC-721 NFT agent with reputation system (ERC-8004)
+- **Real Transaction Execution** — via MetaMask / OKX Wallet
+- **Full Decision History** — every thought and action saved in database
+- **Immersive Cyberpunk UI** — glitch effects, scanlines, Framer Motion animations
+
+---
+
+## Live Infrastructure
+
+| Service              | Link / Address                                              |
+|----------------------|-------------------------------------------------------------|
+| **Frontend**         | [talos-systems-talos-awwf.vercel.app](https://talos-systems-talos-awwf.vercel.app) |
+| **Backend API**      | [talos-systems.onrender.com](https://talos-systems.onrender.com) |
+| **Network**          | Mantle Sepolia Testnet                                      |
+| **mETH Vault**       | `0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7`              |
+| **NFT Contract**     | `0xc94da1ad1116fb6ab4ad7665351c1defec8b2de5`              |
+| **RPC**              | https://rpc.sepolia.mantle.xyz                              |
+
+---
+
+## Tech Stack
+
+- **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Framer Motion
+- **Backend**: Express + TypeScript + Drizzle ORM
+- **AI Engine**: Groq (Llama-3.3-70b)
+- **Database**: PostgreSQL on Render
+- **Blockchain**: ethers.js v6 + Mantle Sepolia
+- **Hosting**: Vercel (Frontend) + Render (Backend + DB)
+
+---
+
+## API Endpoints
+
+| Method | Endpoint                    | Description                          |
+|--------|-----------------------------|--------------------------------------|
+| GET    | `/api/agent/status`         | Current agent state                  |
+| POST   | `/api/agent/think`          | Trigger reasoning cycle              |
+| GET    | `/api/vault/stats`          | Live vault metrics                   |
+| GET    | `/api/decisions`            | Decision & reasoning history         |
+| GET    | `/api/protocols`            | DeFi protocols APY data              |
+| POST   | `/api/nft/prepare-mint`     | Prepare agent NFT mint               |
+| GET    | `/api/healthz`              | Health check                         |
+
+---
+
+## 🚀 Quick Start
+
+```bash
+git clone https://github.com/Artem1981777/talos-systems.git
+cd talos-systems
+
+pnpm install
+
+# Copy environment variables
+cp .env.example .env
+# Add your DATABASE_URL and GROQ_API_KEY
+
+# Start backend
+pnpm --filter @workspace/api-server run dev
+
+# Start frontend
+pnpm --filter @workspace/talos run dev
