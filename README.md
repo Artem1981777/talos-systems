@@ -65,3 +65,69 @@ Each cycle pulls live Mantle Sepolia RPC data, evaluates health factor risk, run
 - Prize Pool: $100,000
 - Organizer: Mantle Network
 - Deadline: June 15, 2026
+Each cycle pulls live Mantle Sepolia RPC data, evaluates health factor risk, runs AI reasoning via Groq Llama-3.3-70b, and persists its decision log to PostgreSQL.
+
+---
+
+## Key Features
+
+- **Autonomous AI Agent** — runs every 120s without human input
+- **Live On-Chain Data** — real mETH vault position from Mantle Sepolia RPC
+- **LangGraph State Machine** — animated 5-node workflow visualization
+- **Multi-Agent Consensus** — WATCHER + VALIDATOR + EXECUTOR sub-agents
+- **Real NFT Minting** — ERC-721 agent identity on Mantle Sepolia
+- **On-Chain Execution** — real transactions via MetaMask/OKX Wallet
+- **ERC-8004 Identity** — on-chain agent identity with reputation system
+- **Decision Persistence** — full reasoning log in PostgreSQL
+- **Cyberpunk UI** — scanline overlay, glitch text, Framer Motion animations
+
+---
+
+## Live Infrastructure
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://talos-systems-talos-awwf.vercel.app |
+| API Backend | https://talos-systems.onrender.com |
+| Network | Mantle Sepolia Testnet |
+| mETH Vault | 0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7 |
+| NFT Contract | 0xc94da1ad1116fb6ab4ad7665351c1defec8b2de5 |
+| RPC | https://rpc.sepolia.mantle.xyz |
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/agent/status | Current agent state |
+| POST | /api/agent/think | Trigger AI reasoning cycle |
+| GET | /api/vault/stats | Live vault metrics |
+| GET | /api/decisions | Decision history |
+| GET | /api/protocols | DeFi protocol APY data |
+| POST | /api/nft/prepare-mint | Prepare NFT mint |
+| GET | /api/healthz | Health check |
+
+---
+
+## Tech Stack
+
+- **Frontend:** React 18 + Vite + TypeScript + Tailwind CSS + Framer Motion
+- **Backend:** Express + TypeScript + Drizzle ORM
+- **AI:** Groq Llama-3.3-70b (free tier)
+- **Database:** PostgreSQL (Render)
+- **Chain:** Mantle Sepolia — ethers.js v6
+- **Infra:** Vercel + Render
+
+---
+
+## Getting Started
+
+```bash
+git clone https://github.com/Artem1981777/talos-systems.git
+cd talos-systems
+pnpm install
+cp .env.example .env
+# Fill in DATABASE_URL, GROQ_API_KEY
+pnpm --filter @workspace/api-server run dev
+pnpm --filter @workspace/talos run dev
