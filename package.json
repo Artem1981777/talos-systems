@@ -10,7 +10,12 @@
   },
   "private": true,
   "devDependencies": {
-    "typescript": "~5.9.2",
-    "prettier": "^3.8.1"
+    "hardhat": "^3.5.1",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2"
+  },
+  "type": "module",
+  "dependencies": {
+    "ethers": "^6.16.0"
   }
 }

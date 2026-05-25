@@ -1,0 +1,42 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_24-ce8ab5ce78a4b040074a1eaa80644b43c09ea7d0",
+  "solcVersion": "0.8.24",
+  "solcLongVersion": "0.8.24",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/AgentIdentity.sol": "project/contracts/AgentIdentity.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/AgentIdentity.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.24;\n\ncontract AgentIdentity {\n    string public name;\n    address public owner;\n\n    constructor(string memory _name) {\n        owner = msg.sender;\n        name = _name;\n    }\n\n    function setName(string memory _name) external {\n        require(msg.sender == owner, \"Only owner\");\n        name = _name;\n    }\n}\n"
+      }
+    }
+  }
+}
