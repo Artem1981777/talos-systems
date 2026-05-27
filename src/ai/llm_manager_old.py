@@ -1,6 +1,7 @@
 """
-TALOS Multi-Provider LLM Manager v2
-With Mock LLM fallback for demo without API keys
+TALOS Multi-Provider LLM Manager
+Pure Python, HTTP-based, no Rust dependencies
+Supports: OpenAI -> Anthropic -> Groq fallback with circuit breaker
 """
 
 import os
@@ -11,8 +12,6 @@ from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 
-from src.ai.mock_llm import get_mock_llm, MockLLMResponse
-
 
 class ProviderStatus(Enum):
     HEALTHY = "healthy"
@@ -22,14 +21,15 @@ class ProviderStatus(Enum):
 
 @dataclass
 class CircuitBreaker:
+    """Circuit breaker pattern for LLM providers"""
     failure_threshold: int = 3
-    recovery_timeout: int = 30
+    recovery_timeout: int = 30  # seconds
     half_open_max_calls: int = 2
     
     failures: int = field(default=0, repr=False)
     last_failure_time: float = field(default=0.0, repr=False)
     half_open_calls: int = field(default=0, repr=False)
-    state: str = field(default="CLOSED", repr=False)
+    state: str = field(default="CLOSED", repr=False)  # CLOSED, OPEN, HALF_OPEN
     
     def can_execute(self) -> bool:
         if self.state == "CLOSED":
@@ -71,7 +71,7 @@ class LLMResponse:
 class LLMManager:
     """
     Multi-provider LLM manager with circuit breaker and automatic fallback.
-    Priority: OpenAI -> Anthropic -> Groq -> Mock LLM (demo mode)
+    Priority: OpenAI (GPT-4o) -> Anthropic (Claude 3.5) -> Groq (Llama 3.3)
     """
     
     PROVIDERS = {
@@ -101,9 +101,7 @@ class LLMManager:
         self.circuit_breakers = {
             name: CircuitBreaker() for name in self.PROVIDERS
         }
-        self.timeout = 30
-        self.mock_llm = get_mock_llm()
-        self.use_mock = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
+        self.timeout = 30  # seconds
     
     def generate(
         self,
@@ -116,26 +114,8 @@ class LLMManager:
     ) -> LLMResponse:
         """
         Generate response with automatic fallback across providers.
-        Falls back to Mock LLM if no API keys available.
         """
-        # Check if we should use mock LLM (no keys or explicit flag)
-        has_any_key = any(self.api_keys.values())
-        
-        if self.use_mock or not has_any_key:
-            print("[LLM] No API keys found, using Mock LLM for demo...")
-            mock_resp = self.mock_llm.generate(
-                system_prompt, user_prompt, temperature, max_tokens, tools, require_json
-            )
-            return LLMResponse(
-                content=mock_resp.content,
-                provider="mock_phi3",
-                model="phi3:mini",
-                usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-                latency_ms=mock_resp.latency_ms,
-                tool_calls=mock_resp.tool_calls
-            )
-        
-        # Try real providers
+        # Sort providers by priority
         sorted_providers = sorted(
             self.PROVIDERS.items(),
             key=lambda x: x[1]["priority"]
@@ -195,54 +175,69 @@ class LLMManager:
                 print(f"[LLM] {provider_name} failed: {str(e)[:100]}")
                 continue
         
-        # All providers failed - fall back to mock
-        print(f"[LLM] All providers failed. Falling back to Mock LLM...")
-        mock_resp = self.mock_llm.generate(
-            system_prompt, user_prompt, temperature, max_tokens, tools, require_json
-        )
-        return LLMResponse(
-            content=mock_resp.content,
-            provider="mock_phi3_fallback",
-            model="phi3:mini",
-            usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-            latency_ms=mock_resp.latency_ms,
-            tool_calls=mock_resp.tool_calls
-        )
+        # All providers failed
+        raise Exception(f"All LLM providers failed. Last error: {last_error}")
     
-    def _call_openai(self, api_key, model, system, user, temperature, max_tokens, tools, json_mode):
+    def _call_openai(
+        self, api_key: str, model: str, system: str, user: str,
+        temperature: float, max_tokens: int, tools: Optional[List[Dict]], json_mode: bool
+    ) -> Dict:
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
-        messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+        
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user}
+        ]
+        
         payload = {
             "model": model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens
         }
+        
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
+        
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
         
-        resp = requests.post(self.PROVIDERS["openai"]["url"], headers=headers, json=payload, timeout=self.timeout)
+        resp = requests.post(
+            self.PROVIDERS["openai"]["url"],
+            headers=headers,
+            json=payload,
+            timeout=self.timeout
+        )
         resp.raise_for_status()
         data = resp.json()
+        
         choice = data["choices"][0]
         message = choice["message"]
-        result = {"content": message.get("content", ""), "usage": data.get("usage", {})}
+        
+        result = {
+            "content": message.get("content", ""),
+            "usage": data.get("usage", {}),
+        }
+        
         if message.get("tool_calls"):
             result["tool_calls"] = message["tool_calls"]
+        
         return result
     
-    def _call_anthropic(self, api_key, model, system, user, temperature, max_tokens, tools):
+    def _call_anthropic(
+        self, api_key: str, model: str, system: str, user: str,
+        temperature: float, max_tokens: int, tools: Optional[List[Dict]]
+    ) -> Dict:
         headers = {
             "x-api-key": api_key,
             "anthropic-version": "2023-06-01",
             "Content-Type": "application/json"
         }
+        
         payload = {
             "model": model,
             "max_tokens": max_tokens,
@@ -250,48 +245,84 @@ class LLMManager:
             "messages": [{"role": "user", "content": user}],
             "temperature": temperature
         }
+        
         if tools:
             payload["tools"] = tools
         
-        resp = requests.post(self.PROVIDERS["anthropic"]["url"], headers=headers, json=payload, timeout=self.timeout)
+        resp = requests.post(
+            self.PROVIDERS["anthropic"]["url"],
+            headers=headers,
+            json=payload,
+            timeout=self.timeout
+        )
         resp.raise_for_status()
         data = resp.json()
+        
         content = data["content"][0]
-        result = {"content": content["text"] if content["type"] == "text" else "", "usage": data.get("usage", {})}
+        
+        result = {
+            "content": content["text"] if content["type"] == "text" else "",
+            "usage": data.get("usage", {}),
+        }
+        
         tool_uses = [c for c in data["content"] if c["type"] == "tool_use"]
         if tool_uses:
             result["tool_calls"] = tool_uses
+        
         return result
     
-    def _call_groq(self, api_key, model, system, user, temperature, max_tokens, tools, json_mode):
+    def _call_groq(
+        self, api_key: str, model: str, system: str, user: str,
+        temperature: float, max_tokens: int, tools: Optional[List[Dict]], json_mode: bool
+    ) -> Dict:
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
-        messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+        
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user}
+        ]
+        
         payload = {
             "model": model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens
         }
+        
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
+        
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
         
-        resp = requests.post(self.PROVIDERS["groq"]["url"], headers=headers, json=payload, timeout=self.timeout)
+        resp = requests.post(
+            self.PROVIDERS["groq"]["url"],
+            headers=headers,
+            json=payload,
+            timeout=self.timeout
+        )
         resp.raise_for_status()
         data = resp.json()
+        
         choice = data["choices"][0]
         message = choice["message"]
-        result = {"content": message.get("content", ""), "usage": data.get("usage", {})}
+        
+        result = {
+            "content": message.get("content", ""),
+            "usage": data.get("usage", {}),
+        }
+        
         if message.get("tool_calls"):
             result["tool_calls"] = message["tool_calls"]
+        
         return result
     
     def get_provider_status(self) -> Dict[str, Dict]:
+        """Get health status of all providers"""
         return {
             name: {
                 "state": cb.state,
@@ -302,6 +333,7 @@ class LLMManager:
         }
 
 
+# Singleton instance
 _llm_manager = None
 
 def get_llm_manager() -> LLMManager:
