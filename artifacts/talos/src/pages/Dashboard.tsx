@@ -177,7 +177,7 @@ function MultiAgentConsensus({ thinking }: { thinking: boolean }) {
             <motion.div
               className="border rounded p-2.5 space-y-2 relative overflow-hidden"
               style={{ borderColor: agent.status === "THINKING" ? agent.color : "hsl(var(--border) / 0.5)" }}
-              animate={agent.status === "THINKING" ? { borderOpacity: [0.5, 1, 0.5] } : {}}
+              animate={agent.status === "THINKING" ? { borderColor: [agent.color, "hsl(var(--border) / 0.5)", agent.color] } : {}}
               transition={{ duration: 0.8, repeat: Infinity }}
             >
               {agent.status === "THINKING" && (
@@ -401,8 +401,8 @@ export default function Dashboard() {
           </div>
           <p className="font-mono text-[10px] text-muted-foreground mt-0.5 pl-6">
             {vault?.network ?? "MANTLE_SEPOLIA"} // BLOCK #{vault?.blockNumber?.toLocaleString() ?? "..."}
-            <span className={`ml-2 ${vault?.rpcOk ? "text-primary" : "text-amber-400"}`}>
-              // RPC: {vault?.rpcOk ? "LIVE" : "FALLBACK"}
+            <span className={`ml-2 ${(vault != null) ? "text-primary" : "text-amber-400"}`}>
+              // RPC: {(vault != null) ? "LIVE" : "FALLBACK"}
             </span>
           </p>
         </div>
@@ -430,9 +430,9 @@ export default function Dashboard() {
                 if (!eth) { alert("Install MetaMask!"); return; }
                 const accounts = await eth.request({ method: "eth_requestAccounts" });
                 try {
-                  await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x1389" }] });
+                  await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x138B" }] });
                 } catch {
-                  await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x1389", chainName: "Mantle Sepolia", nativeCurrency: { name: "MNT", symbol: "MNT", decimals: 18 }, rpcUrls: ["https://rpc.sepolia.mantle.xyz"], blockExplorerUrls: ["https://explorer.sepolia.mantle.xyz"] }] });
+                  await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x138B", chainName: "Mantle Sepolia", nativeCurrency: { name: "MNT", symbol: "MNT", decimals: 18 }, rpcUrls: ["https://rpc.sepolia.mantle.xyz"], blockExplorerUrls: ["https://explorer.sepolia.mantle.xyz"] }] });
                 }
                 const apiBase = import.meta.env.VITE_API_URL || '';
                 const res = await fetch(apiBase + "/api/agent/prepare-tx", {
@@ -604,7 +604,7 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="font-mono text-[10px] text-muted-foreground">EXECUTED</div>
-              <div className="font-mono text-xl font-bold text-primary mt-1">{summary.executedCount}</div>
+              <div className="font-mono text-xl font-bold text-primary mt-1">{summary.executedDecisions}</div>
             </div>
             <div>
               <div className="font-mono text-[10px] text-muted-foreground">AVG_CONFIDENCE</div>

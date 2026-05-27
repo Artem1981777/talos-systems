@@ -17,50 +17,8 @@ const nav = [
   { href: "/backtesting", label: "Backtest", icon: BarChart2, sub: "SIMULATION" },
 ];
 
-function GlitchText({ text }: { text: string }) {
-  return (
-    <span className="relative inline-block">
-      <span className="relative z-10">{text}</span>
-      <motion.span
-        className="absolute inset-0 text-red-500 opacity-0"
-        animate={{ opacity: [0, 0.8, 0], x: [-2, 2, -1, 0] }}
-        transition={{ duration: 0.2, repeat: Infinity, repeatDelay: 4 }}
-      >{text}</motion.span>
-      <motion.span
-        className="absolute inset-0 text-blue-400 opacity-0"
-        animate={{ opacity: [0, 0.6, 0], x: [2, -2, 1, 0] }}
-        transition={{ duration: 0.2, repeat: Infinity, repeatDelay: 4, delay: 0.05 }}
-      >{text}</motion.span>
-    </span>
-  );
-}
 
-function PulsingDot({ color = "primary" }: { color?: string }) {
-  return (
-    <span className="relative flex h-2 w-2">
-      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-${color} opacity-75`}></span>
-      <span className={`relative inline-flex rounded-full h-2 w-2 bg-${color}`}></span>
-    </span>
-  );
-}
 
-function GlitchText({ text }: { text: string }) {
-  return (
-    <span className="relative inline-block">
-      <span className="relative z-10">{text}</span>
-      <motion.span
-        className="absolute inset-0 text-red-500 opacity-0"
-        animate={{ opacity: [0, 0.8, 0], x: [-2, 2, -1, 0] }}
-        transition={{ duration: 0.2, repeat: Infinity, repeatDelay: 4 }}
-      >{text}</motion.span>
-      <motion.span
-        className="absolute inset-0 text-blue-400 opacity-0"
-        animate={{ opacity: [0, 0.6, 0], x: [2, -2, 1, 0] }}
-        transition={{ duration: 0.2, repeat: Infinity, repeatDelay: 4, delay: 0.05 }}
-      >{text}</motion.span>
-    </span>
-  );
-}
 
 function PulsingDot({ color = "primary" }: { color?: string }) {
   return (

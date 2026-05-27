@@ -24,8 +24,9 @@ async function tickAgent() {
     const state = await runTalosAgent();
     latestAgentState = state;
     console.log(`✅ [CRON] Agent tick complete. Strategy: ${state.next_action}. Gas: ${state.market_signals.gas_price_wei / 10**9} Gwei`);
-  } catch (error: any) {
-    console.error(`❌ [CRON ERROR] Failed to tick agent:`, error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`❌ [CRON ERROR] Failed to tick agent:`, message);
   } finally {
     isRunning = false;
   }

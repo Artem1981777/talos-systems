@@ -24,12 +24,21 @@ def get_groq_key():
 
 def get_mantle_metrics():
     """Запрашивает реальный блок, газ и ончейн баланс mETH Vault."""
-    rpc_url = "https://rpc.mantle.xyz" # Или ваш тестнет URL
+    rpc_url = os.getenv("MANTLE_SEPOLIA_RPC_URL", "https://rpc.sepolia.mantle.xyz")  # Mantle Sepolia
     meth_address = "0xcDA86831d771C495C24F7f6ba434c441c91c3d6c"
     vault_address = "0x6335165684DdfE2D994Fd247FEfB1D5e7C35C7A9" # Пример вашего хранилища
     
     headers = {'Content-Type': 'application/json'}
     
+
+    # Safety: ensure we are on Mantle Sepolia (chainId=5003)
+    chain_payload = {"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":0}
+    r_chain = requests.post(rpc_url, json=chain_payload, headers=headers).json()
+    chain_hex = r_chain.get("result", "0x0")
+    chain_id = int(chain_hex, 16) if isinstance(chain_hex, str) else 0
+    if chain_id != 5003:
+        raise Exception(f"Wrong chainId: expected 5003 (Mantle Sepolia), got {chain_id} ({chain_hex})")
+
     try:
         # Получаем номер блока
         block_payload = {"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}
