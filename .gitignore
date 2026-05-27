@@ -11,3 +11,15 @@ simulation_history.json
 .talos_cache/
 node_modules/
 *.bak
+
+# Build artifacts
+*.tsbuildinfo
+dist/
+lib/*/dist/
+lib/*/tsconfig.tsbuildinfo
+
+# Backups
+*_backup.py
+
+# ESLint config (если не нужен в репо)
+eslint.config.mjs
