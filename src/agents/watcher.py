@@ -64,9 +64,20 @@ def get_mantle_metrics():
         gas_price = 50000100000
         vault_balance_meth = 250.5
         
+    # Read last 3 decisions from memory
+    memory = []
+    try:
+        with open("simulation_history.json", "r") as f:
+            history = json.load(f)
+            if isinstance(history, list) and len(history) > 0:
+                memory = history[-3:]
+    except:
+        pass
+
     return {
         "block_number": block_num,
         "gas_price_wei": gas_price,
         "vault_balance": vault_balance_meth,
-        "mETH_price_eth": 1.001 # Можно закрепить или брать из Дуги/Декса
+        "mETH_price_eth": 1.001,
+        "memory": memory
     }
