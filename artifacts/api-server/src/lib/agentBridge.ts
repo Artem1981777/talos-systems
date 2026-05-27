@@ -11,16 +11,22 @@ export interface AgentPayload {
 }
 
 export interface AgentState {
+  market_signals: {
+    mETH_price_eth: number;
+    vault_balance: number;
+    gas_price_wei: number;
+    price_trend_delta: number; // Новое поле памяти
+  };
+  risk_scores: {
+    depeg_risk: number;
+    high_gas_risk: number;
+    consecutive_high_gas_ticks: number; // Новое поле памяти
+  };
   next_action: string;
-  risk_scores: Record<string, number>;
   execution_payload: AgentPayload[];
   errors: string[];
 }
 
-/**
- * Запускает Python-агента TalosGraph прямо в Termux окружении
- * и возвращает распарсенный JSON-результат.
- */
 export function runTalosAgent(): Promise<AgentState> {
   return new Promise((resolve, reject) => {
     const rootDir = path.resolve(__dirname, '../../../../');
