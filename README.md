@@ -1,232 +1,120 @@
-# TALOS Systems 🤖
-
-> Tactical Autonomous Liquidation Operations System
-
-**Live Demo:** https://talos-systems-talos-awwf.vercel.app  
-**API:** https://talos-systems.onrender.com  
-**Built for:** The Turing Test Hackathon 2026 — AI Awakening ($100k prize pool)  
-**Network:** Mantle Sepolia Testnet
-
----
-
-## What is TALOS?
-
-TALOS is an autonomous AI agent that protects and optimizes a mETH vault on Mantle Network. It uses real LLM chain-of-thought reasoning grounded in live on-chain data to make yield optimization and risk management decisions — without any human intervention.
-
-The agent runs a continuous state machine:
-
-OBSERVE → ANALYZE → DECIDE → EXECUTE → REFLECT
-
-Each cycle pulls live Mantle Sepolia RPC data, evaluates health factor risk, runs AI reasoning via Groq Llama-3.3-70b, and persists its decision log to PostgreSQL.
-
----
-
-## Key Features
-
-- Autonomous AI Agent — runs every 120s without human input
-- Live On-Chain Data — real mETH vault position from Mantle Sepolia RPC
-- LangGraph State Machine — animated 5-node workflow visualization
-- Multi-Agent Consensus — WATCHER + VALIDATOR + EXECUTOR sub-agents
-- Real NFT Minting — ERC-721 agent identity on Mantle Sepolia
-- On-Chain Execution — real transactions via MetaMask/OKX Wallet
-- ERC-8004 Identity — on-chain agent identity with reputation system
-- Decision Persistence — full reasoning log in PostgreSQL
-- Cyberpunk UI — scanline overlay, glitch text, Framer Motion animations
-
----
-
-## Live Infrastructure
-
-| Service | URL |
-|---------|-----|
-| Frontend | https://talos-systems-talos-awwf.vercel.app |
-| API Backend | https://talos-systems.onrender.com |
-| Network | Mantle Sepolia Testnet |
-| mETH Vault | 0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7 |
-| NFT Contract | 0xc94da1ad1116fb6ab4ad7665351c1defec8b2de5 |
-
----
-
-## Tech Stack
-
-- Frontend: React 18 + Vite + TypeScript + Tailwind + Framer Motion
-- Backend: Express + TypeScript + Drizzle ORM
-- AI: Groq Llama-3.3-70b
-- Database: PostgreSQL (Render)
-- Chain: Mantle Sepolia + ethers.js v6
-- Infra: Vercel + Render
-
----
-
-## Hackathon
-
-- Event: The Turing Test Hackathon 2026
-- Track: AI x RWA
-- Prize Pool: $100,000
-- Organizer: Mantle Network
-- Deadline: June 15, 2026
-Each cycle pulls live Mantle Sepolia RPC data, evaluates health factor risk, runs AI reasoning via Groq Llama-3.3-70b, and persists its decision log to PostgreSQL.
-
----
-
-## Key Features
-
-- **Autonomous AI Agent** — runs every 120s without human input
-- **Live On-Chain Data** — real mETH vault position from Mantle Sepolia RPC
-- **LangGraph State Machine** — animated 5-node workflow visualization
-- **Multi-Agent Consensus** — WATCHER + VALIDATOR + EXECUTOR sub-agents
-- **Real NFT Minting** — ERC-721 agent identity on Mantle Sepolia
-- **On-Chain Execution** — real transactions via MetaMask/OKX Wallet
-- **ERC-8004 Identity** — on-chain agent identity with reputation system
-- **Decision Persistence** — full reasoning log in PostgreSQL
-- **Cyberpunk UI** — scanline overlay, glitch text, Framer Motion animations
-
----
-
-## Live Infrastructure
-
-| Service | URL |
-|---------|-----|
-| Frontend | https://talos-systems-talos-awwf.vercel.app |
-| API Backend | https://talos-systems.onrender.com |
-| Network | Mantle Sepolia Testnet |
-| mETH Vault | 0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7 |
-| NFT Contract | 0xc94da1ad1116fb6ab4ad7665351c1defec8b2de5 |
-| RPC | https://rpc.sepolia.mantle.xyz |
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | /api/agent/status | Current agent state |
-| POST | /api/agent/think | Trigger AI reasoning cycle |
-| GET | /api/vault/stats | Live vault metrics |
-| GET | /api/decisions | Decision history |
-| GET | /api/protocols | DeFi protocol APY data |
-| POST | /api/nft/prepare-mint | Prepare NFT mint |
-| GET | /api/healthz | Health check |
-
----
-
-## Tech Stack
-
-- **Frontend:** React 18 + Vite + TypeScript + Tailwind CSS + Framer Motion
-- **Backend:** Express + TypeScript + Drizzle ORM
-- **AI:** Groq Llama-3.3-70b (free tier)
-- **Database:** PostgreSQL (Render)
-- **Chain:** Mantle Sepolia — ethers.js v6
-- **Infra:** Vercel + Render
-
----
-
-## Getting Started
-
-```bash
-git clone https://github.com/Artem1981777/talos-systems.git
-cd talos-systems
-pnpm install
-cp .env.example .env
-# Fill in DATABASE_URL, GROQ_API_KEY
-pnpm --filter @workspace/api-server run dev
-pnpm --filter @workspace/talos run dev
-# TALOS Systems 🤖
+# TALOS Systems v2.0 — Autonomous AI DeFi Agent
 
 > **Tactical Autonomous Liquidation Operations System**
+> 
+> **Turing Test Hackathon 2026 — AI x RWA Track**
 
-**An autonomous AI agent that protects and optimizes DeFi vaults using real LLM reasoning on live on-chain data.**
-
-![TALOS Banner](https://github.com/Artem1981777/talos-systems/blob/main/attached_assets/banner.jpg?raw=true)
-
-**Live Demo:** [talos-systems-talos-awwf.vercel.app](https://talos-systems-talos-awwf.vercel.app)  
-**API:** [talos-systems.onrender.com](https://talos-systems.onrender.com)  
-**Network:** Mantle Sepolia Testnet
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-talos--systems.vercel.app-green)](https://talos-systems-talos-awwf.vercel.app)
+[![API](https://img.shields.io/badge/API-talos--systems.onrender.com-blue)](https://talos-systems.onrender.com)
+[![Network](https://img.shields.io/badge/Network-Mantle%20Sepolia-purple)](https://mantle.xyz)
 
 ---
 
-## What is TALOS?
+## What is TALOS v2.0?
 
-**TALOS** is a fully autonomous AI agent designed to protect and optimize an **mETH vault** on the Mantle Network.
+TALOS is a **fully autonomous AI agent** that protects and optimizes DeFi vaults using **real LLM reasoning** with **ReAct pattern**, **persistent memory**, and **on-chain execution** on Mantle Network.
 
-It operates in a continuous intelligent loop:
+### Key Upgrades from v1.0
 
-**OBSERVE → ANALYZE → DECIDE → EXECUTE → REFLECT**
-
-Every 120 seconds the agent:
-- Reads real on-chain data from Mantle Sepolia
-- Runs deep chain-of-thought reasoning powered by **Groq + Llama-3.3-70b**
-- Makes decisions on rebalancing, liquidation protection, and yield optimization
-- Executes transactions on-chain
-- Logs its complete reasoning process to PostgreSQL
-
----
-
-## ✨ Key Features
-
-- **Fully Autonomous Agent** — operates 24/7 without human intervention
-- **Live On-Chain Monitoring** — real-time mETH vault data via RPC
-- **LangGraph State Machine** — beautiful animated 5-step workflow visualization
-- **Multi-Agent System** — WATCHER + VALIDATOR + EXECUTOR agents
-- **On-Chain Identity** — ERC-721 NFT agent with reputation system (ERC-8004)
-- **Real Transaction Execution** — via MetaMask / OKX Wallet
-- **Full Decision History** — every thought and action saved in database
-- **Immersive Cyberpunk UI** — glitch effects, scanlines, Framer Motion animations
+| Feature | v1.0 | v2.0 |
+|---------|------|------|
+| AI Engine | Groq only | Multi-provider (OpenAI + Anthropic + Groq) with Mock LLM fallback |
+| Reasoning | Simple CoT | ReAct pattern with tool calling |
+| Memory | None | diskcache short-term + JSON long-term |
+| Risk Engine | Basic thresholds | VaR, Kelly Criterion, Sharpe Ratio |
+| Multi-Agent | Hardcoded | AI-powered WATCHER/VALIDATOR with reasoning |
+| Fallback | Crash | Risk Engine auto-fallback + Mock LLM |
 
 ---
 
-## Live Infrastructure
-
-| Service              | Link / Address                                              |
-|----------------------|-------------------------------------------------------------|
-| **Frontend**         | [talos-systems-talos-awwf.vercel.app](https://talos-systems-talos-awwf.vercel.app) |
-| **Backend API**      | [talos-systems.onrender.com](https://talos-systems.onrender.com) |
-| **Network**          | Mantle Sepolia Testnet                                      |
-| **mETH Vault**       | `0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7`              |
-| **NFT Contract**     | `0xc94da1ad1116fb6ab4ad7665351c1defec8b2de5`              |
-| **RPC**              | https://rpc.sepolia.mantle.xyz                              |
-
----
-
-## Tech Stack
-
-- **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Framer Motion
-- **Backend**: Express + TypeScript + Drizzle ORM
-- **AI Engine**: Groq (Llama-3.3-70b)
-- **Database**: PostgreSQL on Render
-- **Blockchain**: ethers.js v6 + Mantle Sepolia
-- **Hosting**: Vercel (Frontend) + Render (Backend + DB)
-
----
-
-## API Endpoints
-
-| Method | Endpoint                    | Description                          |
-|--------|-----------------------------|--------------------------------------|
-| GET    | `/api/agent/status`         | Current agent state                  |
-| POST   | `/api/agent/think`          | Trigger reasoning cycle              |
-| GET    | `/api/vault/stats`          | Live vault metrics                   |
-| GET    | `/api/decisions`            | Decision & reasoning history         |
-| GET    | `/api/protocols`            | DeFi protocols APY data              |
-| POST   | `/api/nft/prepare-mint`     | Prepare agent NFT mint               |
-| GET    | `/api/healthz`              | Health check                         |
+## Architecture
+┌─────────────────────────────────────────┐
+│  FRONTEND (React + Vercel)              │
+│  Cyberpunk UI, Real-time Dashboard      │
+├─────────────────────────────────────────┤
+│  API SERVER (Express + Render)            │
+│  WebSocket, REST API                    │
+├─────────────────────────────────────────┤
+│  AI ENGINE (Python)                     │
+│  ├─ Multi-Provider LLM Manager          │
+│  │   OpenAI → Anthropic → Groq → Mock   │
+│  ├─ ReAct Agent (Reasoning + Acting)    │
+│  ├─ Risk Engine (VaR, Kelly, Sharpe)    │
+│  └─ Memory (diskcache + JSON)            │
+├─────────────────────────────────────────┤
+│  BLOCKCHAIN (Mantle Sepolia)            │
+│  ├─ AgentIdentity.sol (ERC-721)        │
+│  ├─ VaultManager.sol (planned)          │
+│  └─ mETH Vault Monitoring               │
+└─────────────────────────────────────────┘
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
+# Clone
 git clone https://github.com/Artem1981777/talos-systems.git
 cd talos-systems
 
-pnpm install
+# Install Python deps
+pip install requests diskcache
 
-# Copy environment variables
-cp .env.example .env
-# Add your DATABASE_URL and GROQ_API_KEY
+# Run with Mock LLM (no API keys needed!)
+export USE_MOCK_LLM=true
+PYTHONPATH=$(pwd) python3 src/main.py
 
-# Start backend
-pnpm --filter @workspace/api-server run dev
+# Or with real LLM
+export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
+export GROQ_API_KEY=gsk-...
+PYTHONPATH=$(pwd) python3 src/main.py
+AI Engine Features
+Multi-Provider LLM with Circuit Breaker
+Priority: OpenAI GPT-4o → Anthropic Claude 3.5 → Groq Llama 3.3
+Circuit Breaker: Auto-recovery after failures
+Mock LLM: Works without any API keys for demo/testing
+ReAct Agent (Reasoning + Acting)
+OBSERVE → ANALYZE → DECIDE → PLAN → EXECUTE
+Tool calling: get_vault_state, get_market_data, calculate_risk_metrics
+Max 5 iterations, conservative fallback
+Risk Engine (Formal Mathematics)
+VaR (Value at Risk): 95% confidence interval
+Kelly Criterion: Optimal position sizing
+Sharpe Ratio: Risk-adjusted return
+Liquidation Probability: Black-Scholes inspired model
+Agent Memory
+Short-term: diskcache (7 days TTL)
+Long-term: JSON file (importance > 0.7)
+Consolidation: Auto-summarize old entries
+Live Demo
+Frontend: https://talos-systems-talos-awwf.vercel.app
+API: https://talos-systems.onrender.com
+Demo Video: https://youtube.com/shorts/-fU0SNQzJRQ
+| Layer      | Technologies                                        |
+| ---------- | --------------------------------------------------- |
+| Frontend   | React 18, Vite, TypeScript, Tailwind, Framer Motion |
+| Backend    | Express, TypeScript, Drizzle ORM, WebSocket         |
+| AI Engine  | Python, Multi-Provider LLM, ReAct, Circuit Breaker  |
+| Memory     | diskcache, JSON                                     |
+| Risk       | Custom VaR, Kelly, Sharpe                           |
+| Blockchain | Mantle Sepolia, ethers.js v6, Solidity 0.8.20       |
+| Infra      | Vercel, Render, PostgreSQL                          |
 
-# Start frontend
-pnpm --filter @workspace/talos run dev
+Project Status
+✅ Multi-provider LLM with fallback
+✅ ReAct agent with tool calling
+✅ Risk engine (VaR, Kelly, Sharpe)
+✅ Agent memory (short + long term)
+✅ Mock LLM for demo without API keys
+✅ On-chain RPC integration (Mantle Sepolia)
+✅ WebSocket real-time updates
+🔄 Flash loan arbitrage (planned)
+🔄 Cross-protocol rebalancing (planned)
+🔄 Strategy NFT minting (planned)
+🔄 3D agent visualization (planned)
+
+License
+MIT License — see LICENSE for details.
+Team
+Built by Artem1981777 for Turing Test Hackathon 2026 — AI x RWA Track.
