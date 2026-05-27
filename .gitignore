@@ -8,3 +8,6 @@ __pycache__/
 .cache/
 .env
 simulation_history.json
+.talos_cache/
+node_modules/
+*.bak
