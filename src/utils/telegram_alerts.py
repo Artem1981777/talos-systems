@@ -56,10 +56,29 @@ class TelegramAlertBot:
         text += "⏱ " + datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
         return self.send_message(text)
 
+    def send_consensus_alert(self, consensus_result, vault):
+        decision = consensus_result.get("final_decision", "HOLD")
+        if decision == "HOLD":
+            return {"ok": True, "skipped": "HOLD"}
+        level = "EMERGENCY" if decision == "EMERGENCY_EXIT" else "CRITICAL"
+        emoji = "🔥" if level == "EMERGENCY" else "🚨"
+        text = emoji + " <b>TALOS CONSENSUS " + level + "</b>\n"
+        text += "━" * 15 + "\n"
+        text += "Decision: <b>" + decision + "</b>\n"
+        text += "Confidence: " + str(round(consensus_result.get("consensus_confidence", 0), 2)) + "\n"
+        text += "Votes: " + str(consensus_result.get("agent_votes", {})) + "\n"
+        text += "\n━" * 15 + "\n"
+        text += "⏱ " + datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+        return self.send_message(text)
 
-def check_and_alert(health_factor, vault, bot_token=None, chat_id=None):
+
+def check_and_alert(health_factor, vault, bot_token=None, chat_id=None, consensus_result=None):
     bot = TelegramAlertBot(bot_token, chat_id)
-    return bot.send_health_alert(health_factor, vault)
+    results = []
+    results.append(bot.send_health_alert(health_factor, vault))
+    if consensus_result:
+        results.append(bot.send_consensus_alert(consensus_result, vault))
+    return results
 
 
 if __name__ == "__main__":
