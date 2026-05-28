@@ -251,3 +251,17 @@ TALOS now sends real-time alerts to Telegram on every agent cycle and critical e
 
 All v2.2 features are opt-in. The existing orchestrator.py remains untouched.
 To enable: import app_v2 from orchestrator_v2_adapter.py instead of app.
+
+## Rate Limiting & API Keys
+
+TALOS uses Groq Llama-3.3-70b for AI reasoning with key rotation support.
+
+Set up to 3 Groq API keys for unlimited autonomous operation:
+
+```env
+GROQ_API_KEY=your_key_1
+GROQ_API_KEY_2=your_key_2  
+GROQ_API_KEY_3=your_key_3
+```
+
+Free tier: 14,400 requests/day per key. With 3 keys = 43,200 req/day — sufficient for continuous autonomous operation at 120s cycle interval.
