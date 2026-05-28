@@ -205,3 +205,49 @@ MIT License — see LICENSE for details.
 ## Team
 
 Built by Artem1981777 for Turing Test Hackathon 2026 — AI x RWA Track.
+
+
+---
+
+## Telegram Alert Integration (v2.2)
+
+TALOS now sends real-time alerts to Telegram on every agent cycle and critical events.
+
+### Setup
+
+1. Create bot via @BotFather in Telegram:
+   - Message /newbot
+   - Name: TALOS Systems Alert
+   - Username: your_talos_bot (must end with bot)
+   - Copy the API token (format: 123456789:ABCdef...)
+
+2. Get your Chat ID:
+   - Message @userinfobot in Telegram
+   - Copy your numeric ID
+
+3. Set environment variables:
+   export TELEGRAM_BOT_TOKEN="123456789:ABCdefGHIjklMNOpqr..."
+   export TELEGRAM_CHAT_ID="123456789"
+
+4. Test alerts:
+   python3 src/utils/telegram_alerts.py
+
+### Alert Types
+
+| Event | Condition | Priority |
+|-------|-----------|----------|
+| Cycle Report | Every RUN_CYCLE | INFO |
+| Health Factor Alert | HF < 1.5 | CRITICAL |
+| Emergency Alert | HF < 1.2 | EMERGENCY |
+| Consensus Alert | LIQUIDATE/EMERGENCY_EXIT | CRITICAL |
+
+### Files Added
+
+- src/agents/consensus_engine_v2.py - Multi-agent consensus engine
+- src/utils/telegram_alerts.py - Telegram alert system
+- src/agents/orchestrator_v2_adapter.py - Adapter for v2.2 features
+
+### Zero Breaking Changes
+
+All v2.2 features are opt-in. The existing orchestrator.py remains untouched.
+To enable: import app_v2 from orchestrator_v2_adapter.py instead of app.
