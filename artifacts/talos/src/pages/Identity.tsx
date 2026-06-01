@@ -261,7 +261,8 @@ export default function Identity() {
               value={identity?.contractAddress ?? ""}
               link={`https://explorer.sepolia.mantle.xyz/address/${identity?.contractAddress}`}
             />
-            <div className="grid grid-cols-2 gap-3">
+            <IdentityField label="AGENT_CARD" value="agent-card.json" link="/.well-known/agent-card.json" />
+                <div className="grid grid-cols-2 gap-3">
               <IdentityField label="NETWORK" value={identity?.network ?? "Mantle Sepolia"} />
               <IdentityField
                 label="REGISTERED"
@@ -313,7 +314,7 @@ export default function Identity() {
                   await provider.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x138B', chainName: 'Mantle Sepolia', nativeCurrency: { name: 'MNT', symbol: 'MNT', decimals: 18 }, rpcUrls: ['https://rpc.sepolia.mantle.xyz'], blockExplorerUrls: ['https://explorer.sepolia.mantle.xyz'] }] });
                 }
                 
-                const NFT_CONTRACT = "0x518f500e7d71e4325b92573ff5415b458808fb35";
+                
                 const mintData = "0x1249c58b";
                 
                 const txHash = await provider.request({
