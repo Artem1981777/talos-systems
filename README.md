@@ -171,7 +171,7 @@ TALOS integrates with **Allora Network** for decentralized AI inference verifica
 | **On-chain Benchmarking** | Allora Network integration |
 | **AI Reasoning** | ReAct pattern with tool calling |
 | **Risk Management** | VaR, Kelly, Sharpe formal engine |
-| **Human vs AI** | Planned: User challenge mode |
+| **Human vs AI** | Live: human oversight mode — approve/reject each AI trade, ROI showdown ([/arena](https://talos-systems-talos-awwf.vercel.app/arena)) |
 | **mETH Vault Management** | Live Mantle Sepolia integration |
 
 ### Co-Sponsors Integration:
@@ -265,3 +265,28 @@ GROQ_API_KEY_3=your_key_3
 ```
 
 Free tier: 14,400 requests/day per key. With 3 keys = 43,200 req/day — sufficient for continuous autonomous operation at 120s cycle interval.
+
+---
+
+## 🆚 Human vs AI — Oversight Mode (v2.3)
+
+> **Live:** https://talos-systems-talos-awwf.vercel.app/arena
+
+A head-to-head mode that puts a human in the loop as TALOS's risk overseer. TALOS proposes autonomous trade decisions one by one — **you approve or reject each call** — and two portfolios are tracked side by side from a $1,000 start.
+
+- **AI Autonomous** — executes *every* decision TALOS makes (compounding)
+- **Human-Supervised** — executes *only* the trades you approve; vetoed trades are skipped
+- **Verdict + scorecard** — final ROI showdown, plus `GOOD_VETOES` (losing trades you blocked) and `BAD_VETOES` (winning trades you rejected)
+- **Per-round breakdown** — action, AI confidence, your decision and realized PnL for every scenario
+- **Replay** — reset and try a different approval strategy
+
+### Why it matters
+This directly addresses the hackathon's **Human vs AI** track: instead of asking "should you trust the agent?", it *quantifies* the value a human overseer adds (or destroys) on top of an autonomous agent as a measurable ROI delta.
+
+| Element | Detail |
+|---------|--------|
+| Route | `/arena` — nav **Human vs AI** (`OVERSIGHT`) |
+| Decisions | 6 deterministic market scenarios (MNT / mETH / yield farm) |
+| Mechanic | Approve / Reject per round — human veto power |
+| Output | AI vs Human ROI, good/bad veto counts, full replay |
+| Stack | React + Framer Motion, 100% client-side (no backend dependency) |
