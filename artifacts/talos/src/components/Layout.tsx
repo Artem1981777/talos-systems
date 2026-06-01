@@ -16,6 +16,7 @@ const nav = [
   { href: "/protocols", label: "Protocols", icon: BarChart2, sub: "YIELD_INTEL" },
   { href: "/analytics", label: "Analytics", icon: LineChart, sub: "PERFORMANCE" },
   { href: "/backtesting", label: "Backtest", icon: BarChart2, sub: "SIMULATION" },
+  { href: "/arena", label: "Human vs AI", icon: Activity, sub: "OVERSIGHT" },
 ];
 
 

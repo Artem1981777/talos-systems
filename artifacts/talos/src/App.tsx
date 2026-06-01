@@ -12,6 +12,7 @@ import Protocols from "@/pages/Protocols";
 import Analytics from "@/pages/Analytics";
 import Backtesting from "@/pages/Backtesting";
 import NotFound from "@/pages/not-found";
+import Arena from "@/pages/Arena";
 
 const apiUrl = import.meta.env.VITE_API_URL || "";
 if (apiUrl) setBaseUrl(apiUrl);
@@ -30,7 +31,8 @@ function Router() {
         <Route path="/protocols" component={Protocols} />
         <Route path="/analytics" component={Analytics} />
           <Route path="/backtesting" component={Backtesting} />
-        <Route component={NotFound} />
+        <Route path="/arena" component={Arena} />
+            <Route component={NotFound} />
       </Switch>
     </Layout>
   );
