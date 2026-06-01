@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Layout from "@/components/Layout";
+import SplashScreen from "@/components/visual/SplashScreen";
 import Dashboard from "@/pages/Dashboard";
 import Decisions from "@/pages/Decisions";
 import Identity from "@/pages/Identity";
@@ -37,6 +38,9 @@ function Router() {
 
 export default function App() {
   return (
+    <>
+      <SplashScreen />
+
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
@@ -56,5 +60,6 @@ export default function App() {
         />
       </TooltipProvider>
     </QueryClientProvider>
+  </>
   );
 }
