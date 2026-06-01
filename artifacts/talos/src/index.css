@@ -365,3 +365,94 @@ body {
     radial-gradient(70% 55% at 50% 108%, hsl(275 100% 60% / 0.16),  transparent 75%) !important;
   background-attachment: fixed !important;
 }
+/* ===== TALOS: дышащая аврора + 3D-сфера ===== */
+.talos-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.talos-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  will-change: transform, opacity;
+}
+.talos-aurora-1 {
+  width: 62vw; height: 62vw; top: -16vw; left: -12vw;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.5), transparent 65%);
+  animation: talos-breathe-1 15s ease-in-out infinite;
+}
+.talos-aurora-2 {
+  width: 56vw; height: 56vw; top: 8vh; right: -16vw;
+  background: radial-gradient(circle, hsl(var(--accent) / 0.42), transparent 65%);
+  animation: talos-breathe-2 19s ease-in-out infinite;
+}
+.talos-aurora-3 {
+  width: 72vw; height: 72vw; bottom: -26vw; left: 8vw;
+  background: radial-gradient(circle, hsl(275 100% 60% / 0.4), transparent 65%);
+  animation: talos-breathe-3 23s ease-in-out infinite;
+}
+@keyframes talos-breathe-1 {
+  0%, 100% { transform: translate(0, 0) scale(1);       opacity: 0.4; }
+  50%      { transform: translate(4vw, 3vh) scale(1.18); opacity: 0.7; }
+}
+@keyframes talos-breathe-2 {
+  0%, 100% { transform: translate(0, 0) scale(1.05);     opacity: 0.32; }
+  50%      { transform: translate(-3vw, 4vh) scale(0.9); opacity: 0.6; }
+}
+@keyframes talos-breathe-3 {
+  0%, 100% { transform: translate(0, 0) scale(0.95);     opacity: 0.42; }
+  50%      { transform: translate(3vw, -3vh) scale(1.2); opacity: 0.68; }
+}
+
+.talos-sphere-wrap {
+  position: absolute;
+  top: 46%; left: 50%;
+  width: min(72vw, 440px);
+  height: min(72vw, 440px);
+  transform: translate(-50%, -50%);
+  perspective: 1000px;
+  opacity: 0.45;
+}
+.talos-sphere {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: talos-globe 28s linear infinite;
+}
+@keyframes talos-globe {
+  from { transform: rotateX(-16deg) rotateY(0deg); }
+  to   { transform: rotateX(-16deg) rotateY(360deg); }
+}
+.talos-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid hsl(var(--primary) / 0.32);
+  box-shadow: 0 0 12px -3px hsl(var(--primary) / 0.3);
+}
+.talos-ring-1 { transform: rotateY(0deg); }
+.talos-ring-2 { transform: rotateY(30deg);  border-color: hsl(var(--accent) / 0.28); }
+.talos-ring-3 { transform: rotateY(60deg); }
+.talos-ring-4 { transform: rotateY(90deg);  border-color: hsl(var(--accent) / 0.28); }
+.talos-ring-5 { transform: rotateY(120deg); }
+.talos-ring-6 { transform: rotateY(150deg); border-color: hsl(var(--accent) / 0.28); }
+.talos-core {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 32%; height: 32%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, hsl(var(--primary) / 0.55), hsl(var(--primary) / 0.08) 60%, transparent 75%);
+  filter: blur(4px);
+  animation: talos-core-pulse 6s ease-in-out infinite;
+}
+@keyframes talos-core-pulse {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); }
+  50%      { opacity: 0.9; transform: translate(-50%, -50%) scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .talos-aurora, .talos-sphere, .talos-core { animation: none; }
+}
