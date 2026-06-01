@@ -1,0 +1,44 @@
+{
+  "protocolVersion": "0.3.0",
+  "name": "TALOS",
+  "description": "Autonomous on-chain trading agent swarm for Mantle DeFi. Multi-agent reasoning across analysis, risk and execution, with ERC-8004 identity and reputation.",
+  "url": "https://talos-systems-talos-awwf.vercel.app",
+  "version": "1.0.0",
+  "provider": {
+    "organization": "TALOS Systems",
+    "url": "https://github.com/Artem1981777/talos-systems"
+  },
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false
+  },
+  "defaultInputModes": ["application/json", "text/plain"],
+  "defaultOutputModes": ["application/json", "text/plain"],
+  "skills": [
+    {
+      "id": "market-analysis",
+      "name": "Market Analysis",
+      "description": "Analyzes Mantle DeFi markets (Merchant Moe, Agni, Fluxion) and emits trade signals with confidence scores.",
+      "tags": ["defi", "trading", "analysis", "mantle"]
+    },
+    {
+      "id": "autonomous-execution",
+      "name": "Autonomous Execution",
+      "description": "Executes swaps on Mantle DEXes from multi-agent consensus, bounded by risk limits.",
+      "tags": ["execution", "swap", "onchain"]
+    },
+    {
+      "id": "risk-management",
+      "name": "Risk Management",
+      "description": "Applies position sizing, stop-loss and take-profit to agent decisions.",
+      "tags": ["risk", "stop-loss", "take-profit"]
+    }
+  ],
+  "registrations": [
+    {
+      "agentRegistry": "eip155:5003:0xc94da1ad1116fb6ab4ad7665351c1defec8b2de5",
+      "agentId": null
+    }
+  ],
+  "trustModels": ["reputation", "feedback"]
+}
