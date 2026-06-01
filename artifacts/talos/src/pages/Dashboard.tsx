@@ -269,7 +269,7 @@ function HealthGauge({ value }: { value: number }) {
 
 function StatBox({ label, value, sub, accent, pulse }: { label: string; value: string; sub?: string; accent?: boolean; pulse?: boolean; }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card border border-border/50 rounded p-3 space-y-1 relative overflow-hidden group hover:border-primary/30 transition-colors">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-lg p-3 space-y-1 relative overflow-hidden group transition-all duration-300 hover:glass-card-hover hover:-translate-y-0.5">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="font-mono text-[10px] text-muted-foreground tracking-wider">{label}</div>
       <motion.div key={value} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`font-mono text-xl font-bold ${accent ? "text-primary" : "text-foreground"}`}>

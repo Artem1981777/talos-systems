@@ -182,3 +182,58 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* ===================== TALOS visual upgrade (glow/aurora) ===================== */
+@theme {
+  --animate-floaty: floaty 6s ease-in-out infinite;
+  --animate-pulse-glow: pulseGlow 3s ease-in-out infinite;
+  --animate-spin-slow: spinSlow 18s linear infinite;
+  --animate-aurora: aurora 18s ease-in-out infinite;
+}
+@keyframes floaty { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-12px) } }
+@keyframes pulseGlow { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
+@keyframes spinSlow { to { transform: rotate(360deg) } }
+@keyframes aurora {
+  0%,100% { transform: translate(0,0) scale(1) }
+  50%     { transform: translate(36px,28px) scale(1.08) }
+}
+@layer utilities {
+  .text-glow      { text-shadow: 0 0 14px hsl(var(--primary) / .55); }
+  .text-glow-cyan { text-shadow: 0 0 14px hsl(var(--accent) / .55); }
+  .glass          { background: hsl(var(--card) / .55); backdrop-filter: blur(16px); border: 1px solid hsl(var(--border)); }
+  .label          { font-family: var(--app-font-mono); font-size: .7rem; text-transform: uppercase; letter-spacing: .25em; color: hsl(var(--muted-foreground)); }
+  .shadow-glow      { box-shadow: 0 0 20px hsl(var(--primary) / .35), 0 0 60px hsl(var(--primary) / .15); }
+  .shadow-glow-cyan { box-shadow: 0 0 20px hsl(var(--accent) / .35), 0 0 60px hsl(var(--accent) / .15); }
+}
+@layer base {
+  body {
+    background-image:
+      radial-gradient(60% 50% at 50% -10%, hsl(var(--primary) / .10), transparent 70%),
+      radial-gradient(45% 45% at 90% 8%,  hsl(var(--accent)  / .10), transparent 70%),
+      radial-gradient(42% 42% at 5% 35%,  hsl(275 100% 62%   / .08), transparent 70%);
+    background-attachment: fixed;
+  }
+}
+/* =========================== /TALOS visual upgrade =========================== */
+
+/* card utilities for StatBox (Tailwind v4 @utility => hover: variants работают) */
+@utility card-surface {
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.08), 0 10px 30px -12px hsl(var(--primary) / 0.22);
+}
+@utility card-glow {
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.25), 0 0 28px -4px hsl(var(--primary) / 0.40);
+}
+
+/* усиленное стекло + ЯВНЫЙ неоновый ореол (всегда виден) */
+@utility glass-card {
+  background: hsl(var(--card) / 0.55);
+  backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--primary) / 0.35);
+  box-shadow: 0 0 20px hsl(var(--primary) / 0.22), inset 0 0 22px hsl(var(--primary) / 0.05);
+}
+@utility glass-card-hover {
+  border-color: hsl(var(--primary) / 0.7);
+  box-shadow: 0 0 34px hsl(var(--primary) / 0.4), inset 0 0 26px hsl(var(--primary) / 0.1);
+}

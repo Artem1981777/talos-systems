@@ -1,3 +1,4 @@
+import AuroraBackground from "./visual/AuroraBackground";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -116,7 +117,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => { setMobileOpen(false); }, [location]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground flex flex-col relative isolate overflow-hidden">
+      <AuroraBackground />
       {/* Scanline overlay */}
       <div
         className="pointer-events-none fixed inset-0 z-[1] opacity-[0.03]"
