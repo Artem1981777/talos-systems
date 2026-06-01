@@ -67,8 +67,8 @@ function AgentStateMachine({ thinking, lastCycleAt }: { thinking: boolean; lastC
   }, [thinking]);
 
   return (
-    <div className="bg-card border border-border/60 rounded p-4">
-      <div className="font-mono text-[10px] text-muted-foreground/60 tracking-widest mb-4">
+    <div className="neon-panel rounded p-4">
+      <div className="font-mono text-[10px] text-primary/70 tracking-widest text-glow mb-4">
         // AGENT_WORKFLOW // LangGraph State Machine
       </div>
       <div className="flex items-center gap-1">
@@ -156,9 +156,9 @@ function MultiAgentConsensus({ thinking }: { thinking: boolean }) {
   const dissentCount = agents.filter((a) => a.vote === "DISSENT").length;
 
   return (
-    <div className="bg-card border border-border/60 rounded p-4">
+    <div className="neon-panel rounded p-4">
       <div className="flex items-center justify-between mb-4">
-        <div className="font-mono text-[10px] text-muted-foreground/60 tracking-widest">// MULTI_AGENT_CONSENSUS</div>
+        <div className="font-mono text-[10px] text-primary/70 tracking-widest text-glow">// MULTI_AGENT_CONSENSUS</div>
         {consensus && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -175,7 +175,7 @@ function MultiAgentConsensus({ thinking }: { thinking: boolean }) {
         {agents.map((agent) => (
           <div key={agent.name} className="space-y-2">
             <motion.div
-              className="border rounded p-2.5 space-y-2 relative overflow-hidden"
+              className="border rounded p-2.5 space-y-2 relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
               style={{ borderColor: agent.status === "THINKING" ? agent.color : "hsl(var(--border) / 0.5)" }}
               animate={agent.status === "THINKING" ? { borderColor: [agent.color, "hsl(var(--border) / 0.5)", agent.color] } : {}}
               transition={{ duration: 0.8, repeat: Infinity }}
@@ -272,7 +272,7 @@ function StatBox({ label, value, sub, accent, pulse }: { label: string; value: s
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-lg p-3 space-y-1 relative overflow-hidden group transition-all duration-300 hover:glass-card-hover hover:-translate-y-0.5">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="font-mono text-[10px] text-muted-foreground tracking-wider">{label}</div>
-      <motion.div key={value} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`font-mono text-xl font-bold ${accent ? "text-primary" : "text-foreground"}`}>
+      <motion.div key={value} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`font-mono text-xl font-bold ${accent ? "text-primary num-glow" : "text-foreground"}`}>
         {pulse && accent ? <motion.span animate={{ opacity: [1, 0.6, 1] }} transition={{ duration: 2, repeat: Infinity }}>{value}</motion.span> : value}
       </motion.div>
       {sub && <div className="font-mono text-[10px] text-muted-foreground/50">{sub}</div>}
@@ -411,14 +411,14 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.95 }} onClick={toggleAgent} disabled={agentLoading}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded font-mono text-xs border transition-all ${agent?.isRunning ? "border-amber-500/40 text-amber-400 hover:bg-amber-500/10" : "border-primary/40 text-primary hover:bg-primary/10"}`}
+              className={`flex items-center gap-2 px-3 py-1.5 neon-btn rounded font-mono text-xs border transition-all ${agent?.isRunning ? "border-amber-500/40 text-amber-400 hover:bg-amber-500/10" : "border-primary/40 text-primary hover:bg-primary/10"}`}
             >
               {agent?.isRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
               {agent?.isRunning ? "PAUSE" : "ACTIVATE"}
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.95 }} onClick={() => triggerThink()} disabled={thinking}
-              className="flex items-center gap-2 px-3 py-1.5 rounded font-mono text-xs border border-accent/40 text-accent hover:bg-accent/10 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-1.5 neon-btn rounded font-mono text-xs border border-accent/40 text-accent hover:bg-accent/10 transition-all disabled:opacity-50"
             >
               <Zap className={`w-3 h-3 ${thinking ? "animate-pulse" : ""}`} />
               {thinking ? "THINKING..." : "RUN_CYCLE"}
@@ -448,7 +448,7 @@ export default function Dashboard() {
                   alert(data.description);
                 }
               }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded font-mono text-xs border border-green-500/40 text-green-400 hover:bg-green-500/10 transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 neon-btn rounded font-mono text-xs border border-green-500/40 text-green-400 hover:bg-green-500/10 transition-all"
             >
               <CheckCircle className="w-3 h-3" />
               EXECUTE
@@ -466,7 +466,7 @@ export default function Dashboard() {
       {/* ── Claude CoT Panel ── */}
       <AnimatePresence>
         {showThought && thought && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="bg-violet-500/5 border border-violet-500/25 rounded overflow-hidden">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="bg-violet-500/5 border border-violet-500/25 rounded overflow-hidden neon-violet">
             <div className="p-4 space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -509,7 +509,7 @@ export default function Dashboard() {
 
       {/* ── Vault Metrics ── */}
       <div>
-        <div className="font-mono text-[10px] text-muted-foreground/50 tracking-widest mb-2">// VAULT_METRICS</div>
+        <div className="font-mono text-[10px] text-primary/70 tracking-widest text-glow mb-2">// VAULT_METRICS</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatBox label="TOTAL_ASSETS" value={vaultLoading ? "---" : `${parseFloat(vault?.totalAssets ?? "0").toFixed(4)}`} sub="mETH on-chain" accent pulse />
           <StatBox label="ETH_PRICE" value={vaultLoading ? "---" : `$${parseFloat(vault?.ethPrice ?? "0").toLocaleString()}`} sub="live feed" />
@@ -520,7 +520,7 @@ export default function Dashboard() {
 
       {/* ── Health Gauge + HF History ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-card border border-border/60 rounded p-4 space-y-4">
+        <div className="neon-panel rounded p-4 space-y-4">
           {vaultLoading ? (
             <div className="font-mono text-xs text-muted-foreground animate-pulse">FETCHING_CHAIN_DATA...</div>
           ) : (
@@ -538,8 +538,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-card border border-border/60 rounded p-4">
-          <div className="font-mono text-[10px] text-muted-foreground/50 tracking-widest mb-3">// HEALTH_FACTOR_HISTORY</div>
+        <div className="neon-panel rounded p-4">
+          <div className="font-mono text-[10px] text-primary/70 tracking-widest text-glow mb-3">// HEALTH_FACTOR_HISTORY</div>
           {hfHistory.length < 2 ? (
             <div className="flex items-center justify-center h-28 font-mono text-xs text-muted-foreground/40">ACCUMULATING_DATA...</div>
           ) : (
@@ -567,8 +567,8 @@ export default function Dashboard() {
       </div>
 
       {/* ── Agent Status ── */}
-      <div className="bg-card border border-border/60 rounded p-4">
-        <div className="font-mono text-[10px] text-muted-foreground/50 tracking-widest mb-3">// AGENT_STATUS</div>
+      <div className="neon-panel rounded p-4">
+        <div className="font-mono text-[10px] text-primary/70 tracking-widest text-glow mb-3">// AGENT_STATUS</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="font-mono text-[10px] text-muted-foreground">MODE</div>
@@ -578,7 +578,7 @@ export default function Dashboard() {
           </div>
           <div>
             <div className="font-mono text-[10px] text-muted-foreground">REPUTATION</div>
-            <div className="font-mono text-xl font-bold text-primary mt-1">{agent?.reputationScore ?? 0} pts</div>
+            <div className="font-mono text-xl font-bold text-primary num-glow mt-1">{agent?.reputationScore ?? 0} pts</div>
           </div>
           <div>
             <div className="font-mono text-[10px] text-muted-foreground">DECISIONS</div>
@@ -595,8 +595,8 @@ export default function Dashboard() {
 
       {/* ── Decision Summary ── */}
       {summary && (
-        <div className="bg-card border border-border/60 rounded p-4">
-          <div className="font-mono text-[10px] text-muted-foreground/50 tracking-widest mb-3">// DECISION_SUMMARY</div>
+        <div className="neon-panel rounded p-4">
+          <div className="font-mono text-[10px] text-primary/70 tracking-widest text-glow mb-3">// DECISION_SUMMARY</div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <div className="font-mono text-[10px] text-muted-foreground">TOTAL_DECISIONS</div>
@@ -604,11 +604,11 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="font-mono text-[10px] text-muted-foreground">EXECUTED</div>
-              <div className="font-mono text-xl font-bold text-primary mt-1">{summary.executedDecisions}</div>
+              <div className="font-mono text-xl font-bold text-primary num-glow mt-1">{summary.executedDecisions}</div>
             </div>
             <div>
               <div className="font-mono text-[10px] text-muted-foreground">AVG_CONFIDENCE</div>
-              <div className="font-mono text-xl font-bold text-accent mt-1">{(summary.avgConfidence * 100).toFixed(0)}%</div>
+              <div className="font-mono text-xl font-bold text-accent num-glow-cyan mt-1">{(summary.avgConfidence * 100).toFixed(0)}%</div>
             </div>
             <div>
               <div className="font-mono text-[10px] text-muted-foreground">TOP_PROTOCOL</div>
