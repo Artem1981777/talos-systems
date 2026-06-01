@@ -1,4 +1,4 @@
-# TALOS Systems v2.0 — Autonomous AI DeFi Agent
+# TALOS Systems v4.0 — Autonomous AI DeFi Agent
 
 > **Tactical Autonomous Liquidation Operations System**
 >
@@ -8,7 +8,7 @@ Turing Test Hackathon 2026 — AI x RWA Track
 
 ---
 
-## What is TALOS v2.0?
+## What is TALOS v4.0?
 
 TALOS is a fully autonomous AI agent that protects and optimizes DeFi vaults using real LLM reasoning with ReAct pattern, persistent memory, and on-chain execution on Mantle Network.
 
@@ -109,12 +109,12 @@ PYTHONPATH=$(pwd) python3 src/main.py
 
 | Layer | Technologies |
 |-------|-------------|
-| Frontend | React 18, Vite, TypeScript, Tailwind, Framer Motion |
+| Frontend | React 19, Vite, TypeScript, Tailwind v4, Framer Motion, wouter |
 | Backend | Express, TypeScript, Drizzle ORM, WebSocket |
 | AI Engine | Python, Multi-Provider LLM, ReAct, Circuit Breaker |
 | Memory | diskcache, JSON |
 | Risk | Custom VaR, Kelly, Sharpe |
-| Blockchain | Mantle Sepolia, ethers.js v6, Solidity 0.8.20 |
+| Blockchain | Mantle Sepolia, ethers.js v6, Solidity 0.8.24 |
 | Infra | Vercel, Render, PostgreSQL |
 
 ---
