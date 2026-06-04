@@ -137,7 +137,7 @@ PYTHONPATH=$(pwd) python3 src/main.py
 
 ## 🌐 Allora Network Integration (v2.1)
 
-TALOS integrates with **Allora Network** for decentralized AI inference verification:
+TALOS integrates with **Allora Network** for decentralized AI inference — now via a live consumer-API oracle (real ETH price feed), with mock fallback:
 
 - **Decentralized Reputation**: Every agent decision is scored by consensus
 - **Trustless Verification**: No single point of failure for AI evaluation
@@ -147,8 +147,8 @@ TALOS integrates with **Allora Network** for decentralized AI inference verifica
 - ✅ Submit predictions to Allora Network
 - ✅ Get consensus scores for decisions
 - ✅ Agent reputation tiers (NOVICE → LEGENDARY)
-- ✅ Mock mode for demo without API keys
-- ✅ Real API mode with Allora API key
+- ✅ Mock fallback for demo without an API key
+- ✅ Real oracle: live Allora consumer API v2 (topic 1 = ETH inference, e.g. ~$1861) via x-api-key; mock only as fallback
 
 ### Allora Reputation Tiers:
 | Tier | Score | Description |
