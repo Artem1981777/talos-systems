@@ -267,6 +267,8 @@ def validator_node(state: dict) -> dict:
         
         # Get Allora reputation
         allora_rep = allora.get_agent_reputation("talos_v2_1")
+        _eth_pred = allora_result.get("allora_value", 0)
+        print("[ALLORA] Real ETH inference (oracle):", _eth_pred, "source:", allora_result.get("source", "mock"))
         print(f"[ALLORA] Reputation: {allora_rep['tier']} (Score: {allora_rep['score']})")
         
         action_map = {
@@ -291,6 +293,7 @@ def validator_node(state: dict) -> dict:
                 "ai_expected_roi": decision.expected_roi,
                 "ai_reasoning": decision.reasoning[:200],
                 "allora_consensus": allora_result.get("consensus_score", 0),
+                "allora_eth_price": allora_result.get("allora_value", 0),
                 "allora_reputation": allora_rep.get("score", 0),
                 "allora_tier": allora_rep.get("tier", "UNKNOWN")
             },
