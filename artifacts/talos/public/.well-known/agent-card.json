@@ -24,7 +24,7 @@
     {
       "id": "autonomous-execution",
       "name": "Autonomous Execution",
-      "description": "Executes swaps on Mantle DEXes from multi-agent consensus, bounded by risk limits.",
+      "description": "Plans and risk-bounds swaps on Mantle DEXes from multi-agent consensus; execution is simulated (read-only, no key custody).",
       "tags": ["execution", "swap", "onchain"]
     },
     {
@@ -37,7 +37,7 @@
   "registrations": [
     {
       "agentRegistry": "eip155:5003:0xc94da1ad1116fb6ab4ad7665351c1defec8b2de5",
-      "agentId": null
+      "agentId": 1
     }
   ],
   "trustModels": ["reputation", "feedback"]
