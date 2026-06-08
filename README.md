@@ -10,7 +10,7 @@ Turing Test Hackathon 2026 — AI x RWA Track
 
 ## What is TALOS v4.0?
 
-TALOS is a fully autonomous AI agent that protects and optimizes DeFi vaults using real LLM reasoning with ReAct pattern, persistent memory, and on-chain execution on Mantle Network.
+TALOS is a fully autonomous AI agent that protects and optimizes DeFi vaults using real LLM reasoning with ReAct pattern, persistent memory, real on-chain reads, and risk-gated simulated execution on Mantle Network.
 
 ---
 
@@ -45,8 +45,8 @@ TALOS is a fully autonomous AI agent that protects and optimizes DeFi vaults usi
 │  └─ Memory (diskcache + JSON)            │
 ├─────────────────────────────────────────┤
 │  BLOCKCHAIN (Mantle Sepolia)            │
-│  ├─ AgentIdentity.sol (ERC-721)         │
-│  ├─ VaultManager.sol (planned)          │
+│  ├─ ERC-8004 ID NFT (live mint)         │
+│  ├─ Allora oracle + reputation          │
 │  └─ mETH Vault Monitoring               │
 └─────────────────────────────────────────┘
 ```
@@ -128,6 +128,10 @@ PYTHONPATH=$(pwd) python3 src/main.py
 - ✅ Mock LLM for demo without API keys
 - ✅ On-chain RPC integration (Mantle Sepolia)
 - ✅ WebSocket real-time updates
+- ✅ Real Allora consumer-API oracle (live ETH inference)
+- ✅ Human vs AI oversight mode (/arena)
+- ✅ ERC-8004 agent identity NFT (Mantle Sepolia)
+- ✅ requirements.txt + MIT LICENSE
 - 🔄 Flash loan arbitrage (planned)
 - 🔄 Cross-protocol rebalancing (planned)
 - 🔄 Strategy NFT minting (planned)
@@ -167,7 +171,7 @@ TALOS integrates with **Allora Network** for decentralized AI inference — now 
 
 | Criteria | TALOS Implementation |
 |----------|---------------------|
-| **ERC-8004 Agent Identity** | AgentIdentity.sol with reputation |
+| **ERC-8004 Agent Identity** | Live ERC-8004 identity NFT minted on Mantle Sepolia |
 | **On-chain Benchmarking** | Allora Network integration |
 | **AI Reasoning** | ReAct pattern with tool calling |
 | **Risk Management** | VaR, Kelly, Sharpe formal engine |
