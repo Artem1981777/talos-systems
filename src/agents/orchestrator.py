@@ -386,6 +386,21 @@ def rebalance_node(state: dict) -> dict:
     print(f"[SIMULATOR] Running pre-flight simulation with adaptive slippage ({slippage}%)...")
     
     sim_results = simulate_swap_slippage(amount_wei, slippage_tolerance_pct=slippage)
+
+    # [P0] real on-chain pre-trade dry-run gate before (simulated) execution
+    preflight_info = {"enabled": False, "reason": "MANTLE_ROUTER_ADDR not set"}
+    _router = os.environ.get("MANTLE_ROUTER_ADDR")
+    if _router:
+        from src.execution.simulator import preflight
+        _meth = "0xcDA867F2396E499B710c91527eCe1D904f8e3E43"
+        _quote = os.environ.get("MANTLE_QUOTE_TOKEN", _meth)
+        _pf = preflight(_router, amount_wei, [_meth, _quote], sim_results["amount_out_min"])
+        preflight_info = {"enabled": True, "ok": _pf.ok, "reason": _pf.reason, "amount_out": _pf.amount_out}
+        print("[PREFLIGHT]", "PASS" if _pf.ok else "BLOCK", _pf.reason, "amount_out=", _pf.amount_out)
+        if not _pf.ok:
+            return {"execution_payload": [], "errors": ["preflight_blocked:" + _pf.reason], "preflight": preflight_info}
+    else:
+        print("[PREFLIGHT] skipped: MANTLE_ROUTER_ADDR not configured")
     
     payload = [{
         "target": "MerchantMoe_Router",
@@ -412,7 +427,7 @@ def rebalance_node(state: dict) -> dict:
         importance=0.8
     ))
     
-    return {"execution_payload": payload, "errors": []}
+    return {"execution_payload": payload, "errors": [], "preflight": preflight_info}
 
 
 # Build workflow
