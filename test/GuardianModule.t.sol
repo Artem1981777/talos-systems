@@ -5,7 +5,7 @@ import "../contracts/GuardianModule.sol";
 
 interface Vm {
     function warp(uint256) external;
-    function expectRevert(bytes4) external;
+    function expectRevert(bytes4) external; function expectRevert(bytes calldata) external;
 }
 
 contract GuardianModuleTest {
@@ -53,7 +53,7 @@ contract GuardianModuleTest {
     }
 
     function test_timelock() public {
-        vm.expectRevert(GuardianModule.TimelockPending.selector);
+        vm.expectRevert(abi.encodeWithSelector(GuardianModule.TimelockPending.selector, uint256(0)));
         g.setMaxTrade(200e18);
         bytes32 id = keccak256(abi.encodePacked("maxTrade", uint256(200e18)));
         g.queue(id);
@@ -68,7 +68,7 @@ contract GuardianModuleTest {
         require(!g.guardExecution(amountWei, pegE18), "paused guard");
     }
 
-    function testFuzz_withinLimits(uint96 amountWei, uint256 pegE18) public {
+    function testFuzz_withinLimits(uint96 amountWei, uint256 pegE18) public view {
         uint256 amt = uint256(amountWei) % MAXT + 1;
         uint256 peg = pegE18 < MINPEG ? MINPEG : pegE18;
         require(g.canExecute(amt, peg), "within limits");
