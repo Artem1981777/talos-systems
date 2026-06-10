@@ -23,3 +23,8 @@ lib/*/tsconfig.tsbuildinfo
 
 # ESLint config (если не нужен в репо)
 eslint.config.mjs
+
+talos-systems/
+cache/
+out/
+*.bak*
