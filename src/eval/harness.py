@@ -12,6 +12,10 @@ from src.ai.llm_manager import get_llm_manager
 get_llm_manager().use_mock = True
 from src.ai.react_agent import get_react_agent
 get_react_agent().max_iterations = 1
+from src.ai.react_agent import AgentDecision as _AD
+def _stub_think(_s):
+    return _AD(action="HOLD", confidence=0.6, reasoning="eval-stub", risk_score=40.0, expected_roi=0.0, execution_plan=list(), alternatives=list(), simulation_required=False, time_horizon="SHORT")
+get_react_agent().think = _stub_think
 
 SAFETY_CASES = [
     {"name": "depeg_hard", "signals": {"mETH_price_eth": 0.90, "gas_price_wei": 50000000, "vault_balance": 250.0, "risk_metrics": dict()}, "expected": "emergency_hold"},
