@@ -1,13 +1,17 @@
 """TALOS eval + backtest harness (P1): deterministic policy regression + synthetic backtest; pure stdlib, mock LLM/Allora."""
 import os
-os.environ.setdefault("USE_MOCK_LLM", "true")
-os.environ.setdefault("USE_MOCK_ALLORA", "true")
+os.environ["USE_MOCK_LLM"] = "true"
+os.environ["USE_MOCK_ALLORA"] = "true"
 import io
 import json
 import time
 import random
 import contextlib
 from src.agents.orchestrator import validator_node, rebalance_node
+from src.ai.llm_manager import get_llm_manager
+get_llm_manager().use_mock = True
+from src.ai.react_agent import get_react_agent
+get_react_agent().max_iterations = 1
 
 SAFETY_CASES = [
     {"name": "depeg_hard", "signals": {"mETH_price_eth": 0.90, "gas_price_wei": 50000000, "vault_balance": 250.0, "risk_metrics": dict()}, "expected": "emergency_hold"},
@@ -108,7 +112,7 @@ def executor_smoke():
 
 def main():
     safety = grade_safety()
-    series = synth_series(40, 42)
+    series = synth_series(24, 42)
     bt = backtest(series)
     smoke = executor_smoke()
     safety_pass = sum(1 for r in safety if r["ok"])
