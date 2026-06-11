@@ -373,6 +373,16 @@ def rebalance_node(state: dict) -> dict:
     ai_decision = state.get("ai_decision", {})
     
     amount_wei = int(balance * 10**18)
+    # [P0] on-chain GuardianModule circuit breaker (read-only canExecute)
+    from src.execution.guardian_gate import guardian_check
+    _peg_e18 = int(signals.get("mETH_price_eth", 1.0) * 10**18)
+    _g = guardian_check(amount_wei, _peg_e18)
+    if _g["enabled"]:
+        print("[GUARDIAN]", "ALLOW" if _g["allowed"] else "BLOCK", _g["reason"], "addr=", _g["address"])
+        if not _g["allowed"]:
+            return {"execution_payload": [], "errors": ["guardian_blocked:" + _g["reason"]], "guardian": _g}
+    else:
+        print("[GUARDIAN] skipped:", _g["reason"])
     
     print(f"[EXECUTOR] AI-planned rebalancing: {balance:.2f} mETH")
     
