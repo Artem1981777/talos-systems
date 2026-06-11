@@ -166,8 +166,24 @@ export ALLORA_TOPIC_ID=1
 - ✅ Human vs AI oversight arena
 - ✅ Risk engine (VaR, Kelly, Sharpe) + agent memory
 - ✅ Telegram alerts
-- 🔄 GuardianModule on-chain risk guard (in progress)
+- ✅ GuardianModule on-chain circuit breaker - deployed to Mantle Sepolia + wired into the agent
 - 🔄 Flash-loan arbitrage, cross-protocol rebalancing, strategy NFTs (planned)
+
+---
+
+## On-chain Risk Guard - GuardianModule (live)
+
+Before any (simulated) execution, TALOS consults a real **on-chain circuit breaker**. The rebalance node performs a read-only `canExecute(amountWei, pegE18)` call to the deployed **GuardianModule** on Mantle Sepolia; a false result downgrades the trade to a no-op (`guardian_blocked`).
+
+- **Contract:** [`0xdE92F423f6d58bc75c0716cC30b158154d84a19a`](https://sepolia.mantlescan.xyz/address/0xdE92F423f6d58bc75c0716cC30b158154d84a19a) on Mantle Sepolia (chainId 5003)
+- **Parameters:** per-trade cap 100 mETH, daily cap 250 mETH, min peg 0.97, param timelock 2 days
+- **Guards:** pause latch, per-trade max, daily spend cap, de-peg floor (peg below 0.97 blocks execution)
+- **Integration:** `src/execution/guardian_gate.py` (requests-only JSON-RPC, no new deps), env-gated via `MANTLE_GUARDIAN_ADDR`, offline-safe (unset means skipped, so eval and CI stay hermetic), fail-closed (RPC error means blocked)
+- **Verified live:** canExecute(50e18, 1.0) returns true; canExecute(50e18, 0.95) returns false (de-peg); canExecute(200e18, 1.0) returns false (over cap)
+
+> A full-vault move (~250 mETH) intentionally exceeds the per-trade cap and is blocked by the breaker. Sizing trades within the cap (or splitting across the daily allowance) is the planned next step; raising the cap requires a 2-day timelocked setMaxTrade.
+
+**Security / key handling:** GuardianModule was deployed from a fresh burner address funded with test-only MNT. The maintainer private key is never exposed - deployment uses local Foundry (`forge create`) with the key read from a local environment variable only, never pasted into chat, logs, or remote scripts.
 
 ---
 
