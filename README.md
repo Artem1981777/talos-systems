@@ -1,29 +1,41 @@
-# TALOS Systems v4.0 — Autonomous AI DeFi Agent
+# TALOS Systems — Autonomous AI DeFi Agent
 
 > **Tactical Autonomous Liquidation Operations System**
 >
-Turing Test Hackathon 2026 — AI x RWA Track
+> Turing Test Hackathon 2026 — AI x RWA Track
 
-[Live Demo](https://talos-systems-talos-awwf.vercel.app) | [API](https://talos-systems.onrender.com) | [Network](https://allora.network)
-
----
-
-## What is TALOS v4.0?
-
-TALOS is a fully autonomous AI agent that protects and optimizes DeFi vaults using real LLM reasoning with ReAct pattern, persistent memory, real on-chain reads, and risk-gated simulated execution on Mantle Network.
+**[🌐 Live Demo](https://talos-systems-talos-awwf.vercel.app)** · **[🆚 Human vs AI Arena](https://talos-systems-talos-awwf.vercel.app/arena)** · **[⚙️ Live API](https://talos-api-wfzx.onrender.com/api/healthz)** · **[🎬 Demo Video](https://youtube.com/shorts/-fU0SNQzJRQ)**
 
 ---
 
-## Key Upgrades from v1.0
+## What is TALOS?
 
-| Feature | v1.0 | v2.0 |
-|---------|------|------|
-| AI Engine | Groq only | Multi-provider (OpenAI + Anthropic + Groq) with Mock LLM fallback |
-| Reasoning | Simple CoT | ReAct pattern with tool calling |
-| Memory | None | diskcache short-term + JSON long-term |
-| Risk Engine | Basic thresholds | VaR, Kelly Criterion, Sharpe Ratio |
-| Multi-Agent | Hardcoded | AI-powered WATCHER/VALIDATOR with reasoning |
-| Fallback | Crash | Risk Engine auto-fallback + Mock LLM |
+TALOS is a fully autonomous AI agent that protects and optimizes a **mETH (Mantle ETH) yield vault**. It reads live on-chain data from **Mantle Sepolia**, reasons about market conditions with a real LLM (Groq Llama-3.3-70b), scores risk with a formal math engine, and proposes allocation decisions — all visible in real time on a cyberpunk dashboard.
+
+- **ERC-8004 agent identity** — NFT `#0x001`, vault contract [`0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7`](https://sepolia.mantlescan.xyz/address/0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7) on Mantle Sepolia
+- **Real AI reasoning** — structured OBSERVATION → RISK_ASSESSMENT → THOUGHT → ACTION output, live in the dashboard
+- **Human vs AI oversight mode** — approve/reject every AI trade and compare ROI ([/arena](https://talos-systems-talos-awwf.vercel.app/arena))
+
+---
+
+## Try It (for judges)
+
+1. Open the **[Live Demo](https://talos-systems-talos-awwf.vercel.app)** — vault stats (collateral, debt, health factor) are read live from Mantle Sepolia. *Note: the free-tier API cold-starts in ~50 s after inactivity.*
+2. Trigger an **AI analysis** — the agent calls Groq Llama-3.3-70b and returns full reasoning. The shared demo key allows **5 AI requests/day per IP**; bring your own key for unlimited access.
+3. Play the **[Human vs AI Arena](https://talos-systems-talos-awwf.vercel.app/arena)** — veto the agent's trades and see whether you beat full autonomy.
+
+### Live API endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/healthz` | GET | Service health |
+| `/api/vault/stats` | GET | Live vault position from Mantle Sepolia |
+| `/api/agent/think` | POST | Real LLM reasoning + allocation decision |
+| `/api/agent/status` | GET | Agent identity & state |
+| `/api/decisions` | GET | Decision history |
+| `/api/protocols` | GET | Available DeFi protocols |
+
+Base URL: `https://talos-api-wfzx.onrender.com`
 
 ---
 
@@ -31,266 +43,136 @@ TALOS is a fully autonomous AI agent that protects and optimizes DeFi vaults usi
 
 ```
 ┌─────────────────────────────────────────┐
-│  FRONTEND (React + Vercel)              │
-│  Cyberpunk UI, Real-time Dashboard       │
+│  FRONTEND (React 19 + Vite · Vercel)    │
+│  Cyberpunk UI, real-time dashboard       │
 ├─────────────────────────────────────────┤
-│  API SERVER (Express + Render)          │
-│  WebSocket, REST API                     │
+│  API SERVER (Express + TS · Render)     │
+│  REST + SSE stream, Drizzle + Postgres   │
+│  Groq Llama-3.3-70b reasoning            │
 ├─────────────────────────────────────────┤
-│  AI ENGINE (Python)                      │
-│  ├─ Multi-Provider LLM Manager          │
-│  │   OpenAI → Anthropic → Groq → Mock   │
-│  ├─ ReAct Agent (Reasoning + Acting)     │
-│  ├─ Risk Engine (VaR, Kelly, Sharpe)    │
+│  AI ENGINE (Python, standalone)          │
+│  ├─ Multi-provider LLM manager           │
+│  │   OpenAI → Anthropic → Groq → Mock    │
+│  ├─ ReAct agent (reasoning + acting)     │
+│  ├─ Risk engine (VaR, Kelly, Sharpe)     │
 │  └─ Memory (diskcache + JSON)            │
 ├─────────────────────────────────────────┤
-│  BLOCKCHAIN (Mantle Sepolia)            │
-│  ├─ ERC-8004 ID NFT (live mint)         │
-│  ├─ Allora oracle + reputation          │
-│  └─ mETH Vault Monitoring               │
+│  BLOCKCHAIN (Mantle Sepolia)             │
+│  ├─ ERC-8004 identity NFT (live mint)    │
+│  ├─ Allora oracle + reputation           │
+│  └─ mETH vault monitoring (live reads)   │
 └─────────────────────────────────────────┘
 ```
-
----
-
-## Quick Start
-
-```bash
-# Clone
-git clone https://github.com/Artem1981777/talos-systems.git
-cd talos-systems
-
-# Install Python deps
-pip install requests diskcache
-
-# Run with Mock LLM (no API keys needed!)
-export USE_MOCK_LLM=true
-PYTHONPATH=$(pwd) python3 src/main.py
-
-# Or with real LLM
-export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
-export GROQ_API_KEY=gsk-...
-PYTHONPATH=$(pwd) python3 src/main.py
-```
-
----
-
-## AI Engine Features
-
-### Multi-Provider LLM with Circuit Breaker
-- **Priority**: OpenAI GPT-4o → Anthropic Claude 3.5 → Groq Llama 3.3
-- **Circuit Breaker**: Auto-recovery after failures
-- **Mock LLM**: Works without any API keys for demo/testing
-
-### ReAct Agent (Reasoning + Acting)
-- **OBSERVE → ANALYZE → DECIDE → PLAN → EXECUTE**
-- **Tool calling**: `get_vault_state`, `get_market_data`, `calculate_risk_metrics`
-- **Max 5 iterations**, conservative fallback
-
-### Risk Engine (Formal Mathematics)
-- **VaR (Value at Risk)**: 95% confidence interval
-- **Kelly Criterion**: Optimal position sizing
-- **Sharpe Ratio**: Risk-adjusted return
-- **Liquidation Probability**: Black-Scholes inspired model
-
-### Agent Memory
-- **Short-term**: diskcache (7 days TTL)
-- **Long-term**: JSON file (importance > 0.7)
-- **Consolidation**: Auto-summarize old entries
-
----
-
-## Live Demo
-
-- **Frontend**: https://talos-systems-talos-awwf.vercel.app
-- **API**: https://talos-systems.onrender.com
-- **Demo Video**: https://youtube.com/shorts/-fU0SNQzJRQ
 
 | Layer | Technologies |
 |-------|-------------|
 | Frontend | React 19, Vite, TypeScript, Tailwind v4, Framer Motion, wouter |
-| Backend | Express, TypeScript, Drizzle ORM, WebSocket |
-| AI Engine | Python, Multi-Provider LLM, ReAct, Circuit Breaker |
-| Memory | diskcache, JSON |
-| Risk | Custom VaR, Kelly, Sharpe |
+| Backend | Express 5, TypeScript, Drizzle ORM, PostgreSQL |
+| AI | Groq Llama-3.3-70b (live), Python multi-provider engine (ReAct) |
+| Risk | Custom VaR, Kelly Criterion, Sharpe Ratio |
 | Blockchain | Mantle Sepolia, ethers.js v6, Solidity 0.8.24 |
-| Infra | Vercel, Render, PostgreSQL |
+| Infra | Vercel (frontend), Render (API + Postgres) |
+
+---
+
+## Quick Start (local)
+
+```bash
+git clone https://github.com/Artem1981777/talos-systems.git
+cd talos-systems
+
+# Full web stack (Node 20+, pnpm)
+pnpm install
+PORT=3000 pnpm --filter @workspace/api-server dev   # API on :3000
+pnpm --filter @workspace/talos dev                   # frontend (Vite)
+
+# Python AI engine — works with zero API keys (Mock LLM)
+pip install -r requirements.txt
+export USE_MOCK_LLM=true USE_MOCK_ALLORA=true
+PYTHONPATH=$(pwd) python3 src/main.py
+
+# ...or with real providers
+export GROQ_API_KEY=gsk_...        # and/or OPENAI_API_KEY / ANTHROPIC_API_KEY
+PYTHONPATH=$(pwd) python3 src/main.py
+```
+
+Environment for the deployed API (`render.yaml`): `DATABASE_URL` (Postgres), `GROQ_API_KEY` (AI reasoning).
+
+---
+
+## AI Engine
+
+### LLM reasoning (live, on the API)
+- **Groq Llama-3.3-70b** generates structured decisions: OBSERVATION → RISK_ASSESSMENT → THOUGHT → NEXT_ACTION → ACTION + confidence
+- **Shared-pool protection**: 5 requests/day per IP on the demo key; `x-anthropic-key` header for BYOK; demo fallback mode for offline judging
+
+### Python engine (standalone)
+- **Multi-provider with circuit breaker**: OpenAI GPT-4o → Anthropic Claude 3.5 → Groq → Mock LLM (no keys needed)
+- **ReAct pattern**: OBSERVE → ANALYZE → DECIDE → PLAN → EXECUTE with tool calling (`get_vault_state`, `get_market_data`, `calculate_risk_metrics`), max 5 iterations, conservative fallback
+- **Risk engine**: VaR (95% CI), Kelly Criterion position sizing, Sharpe Ratio, liquidation-probability model
+- **Memory**: diskcache short-term (7-day TTL) + JSON long-term (importance > 0.7) with auto-consolidation
+- **Telegram alerts**: cycle reports, health-factor warnings (HF < 1.5 critical, < 1.2 emergency) — see `src/utils/telegram_alerts.py`
+
+---
+
+## 🆚 Human vs AI — Oversight Mode
+
+> **Live:** https://talos-systems-talos-awwf.vercel.app/arena
+
+TALOS proposes trade decisions one by one — **you approve or reject each call** — and two portfolios are tracked side by side from a $1,000 start:
+
+- **AI Autonomous** — executes *every* decision TALOS makes (compounding)
+- **Human-Supervised** — executes *only* the trades you approve
+- **Verdict + scorecard** — final ROI showdown, `GOOD_VETOES` (losing trades you blocked) vs `BAD_VETOES` (winners you rejected), full per-round breakdown, replayable
+
+Instead of asking *"should you trust the agent?"*, the arena **quantifies** the value a human overseer adds (or destroys) as a measurable ROI delta.
+
+---
+
+## 🌐 Allora Network Integration
+
+Decentralized AI inference and reputation via a **live Allora consumer-API oracle** (real ETH price feed, topic 1), with mock fallback for keyless demos:
+
+- Consensus scoring for agent decisions, on-chain reputation in the ERC-8004 identity
+- Reputation tiers: NOVICE → INTERMEDIATE → ADVANCED → EXPERT → LEGENDARY (0 → 9000+)
+
+```bash
+export ALLORA_API_KEY=your_key   # or USE_MOCK_ALLORA=true
+export ALLORA_TOPIC_ID=1
+```
+
+---
+
+## 🏆 Hackathon Criteria Alignment
+
+| Criteria | TALOS Implementation |
+|----------|---------------------|
+| **ERC-8004 Agent Identity** | Live identity NFT minted on Mantle Sepolia |
+| **AI Reasoning** | Live Groq LLM on the API + ReAct engine with tool calling |
+| **On-chain Benchmarking** | Allora Network oracle + reputation |
+| **Risk Management** | Formal VaR / Kelly / Sharpe engine |
+| **Human vs AI** | Live oversight arena with ROI showdown ([/arena](https://talos-systems-talos-awwf.vercel.app/arena)) |
+| **mETH Vault Management** | Live Mantle Sepolia vault reads |
 
 ---
 
 ## Project Status
 
-- ✅ Multi-provider LLM with fallback
-- ✅ ReAct agent with tool calling
-- ✅ Risk engine (VaR, Kelly, Sharpe)
-- ✅ Agent memory (short + long term)
-- ✅ Mock LLM for demo without API keys
-- ✅ On-chain RPC integration (Mantle Sepolia)
-- ✅ WebSocket real-time updates
-- ✅ Real Allora consumer-API oracle (live ETH inference)
-- ✅ Human vs AI oversight mode (/arena)
-- ✅ ERC-8004 agent identity NFT (Mantle Sepolia)
-- ✅ requirements.txt + MIT LICENSE
-- 🔄 Flash loan arbitrage (planned)
-- 🔄 Cross-protocol rebalancing (planned)
-- 🔄 Strategy NFT minting (planned)
-- 🔄 3D agent visualization (planned)
+- ✅ Live frontend (Vercel) + API (Render) + PostgreSQL
+- ✅ Real LLM reasoning on the deployed API (Groq)
+- ✅ Live on-chain vault reads (Mantle Sepolia)
+- ✅ ERC-8004 agent identity NFT
+- ✅ Allora consumer-API oracle (live ETH inference)
+- ✅ Human vs AI oversight arena
+- ✅ Risk engine (VaR, Kelly, Sharpe) + agent memory
+- ✅ Telegram alerts
+- 🔄 GuardianModule on-chain risk guard (in progress)
+- 🔄 Flash-loan arbitrage, cross-protocol rebalancing, strategy NFTs (planned)
 
 ---
 
-## 🌐 Allora Network Integration (v2.1)
+## License & Team
 
-TALOS integrates with **Allora Network** for decentralized AI inference — now via a live consumer-API oracle (real ETH price feed), with mock fallback:
+MIT License — see [LICENSE](LICENSE).
 
-- **Decentralized Reputation**: Every agent decision is scored by consensus
-- **Trustless Verification**: No single point of failure for AI evaluation
-- **On-chain Reputation NFT**: ERC-8004 compliant agent identity with Allora scores
-
-### Allora Features:
-- ✅ Submit predictions to Allora Network
-- ✅ Get consensus scores for decisions
-- ✅ Agent reputation tiers (NOVICE → LEGENDARY)
-- ✅ Mock fallback for demo without an API key
-- ✅ Real oracle: live Allora consumer API v2 (topic 1 = ETH inference, e.g. ~$1861) via x-api-key; mock only as fallback
-
-### Allora Reputation Tiers:
-| Tier | Score | Description |
-|------|-------|-------------|
-| NOVICE | 0-4000 | Starting agent |
-| INTERMEDIATE | 4000-6000 | Proven track record |
-| ADVANCED | 6000-8000 | Reliable performer |
-| EXPERT | 8000-9000 | Top performer |
-| LEGENDARY | 9000+ | Elite agent |
-
----
-
-## 🏆 Turing Test Hackathon 2026 — AI x RWA Track
-
-### Judging Criteria Alignment:
-
-| Criteria | TALOS Implementation |
-|----------|---------------------|
-| **ERC-8004 Agent Identity** | Live ERC-8004 identity NFT minted on Mantle Sepolia |
-| **On-chain Benchmarking** | Allora Network integration |
-| **AI Reasoning** | ReAct pattern with tool calling |
-| **Risk Management** | VaR, Kelly, Sharpe formal engine |
-| **Human vs AI** | Live: human oversight mode — approve/reject each AI trade, ROI showdown ([/arena](https://talos-systems-talos-awwf.vercel.app/arena)) |
-| **mETH Vault Management** | Live Mantle Sepolia integration |
-
-### Co-Sponsors Integration:
-- **Bybit**: Trading API integration (planned)
-- **Merchant Moe**: DEX integration (planned)
-- **Agni Finance**: Lending integration (planned)
-- **Fluxion**: Yield optimization (planned)
-
----
-
-## 🚀 Quick Start with Allora
-
-```bash
-# Run with Mock Allora (no API key needed)
-export USE_MOCK_ALLORA=true
-export USE_MOCK_LLM=true
-PYTHONPATH=$(pwd) python3 src/main.py
-
-# Run with Real Allora (get API key at https://allora.network)
-export ALLORA_API_KEY=your_key_here
-export ALLORA_TOPIC_ID=1
-PYTHONPATH=$(pwd) python3 src/main.py
-```
-
----
-
-## License
-
-MIT License — see LICENSE for details.
-
-## Team
-
-Built by Artem1981777 for Turing Test Hackathon 2026 — AI x RWA Track.
-
-
----
-
-## Telegram Alert Integration (v2.2)
-
-TALOS now sends real-time alerts to Telegram on every agent cycle and critical events.
-
-### Setup
-
-1. Create bot via @BotFather in Telegram:
-   - Message /newbot
-   - Name: TALOS Systems Alert
-   - Username: your_talos_bot (must end with bot)
-   - Copy the API token (format: 123456789:ABCdef...)
-
-2. Get your Chat ID:
-   - Message @userinfobot in Telegram
-   - Copy your numeric ID
-
-3. Set environment variables:
-   export TELEGRAM_BOT_TOKEN="123456789:ABCdefGHIjklMNOpqr..."
-   export TELEGRAM_CHAT_ID="123456789"
-
-4. Test alerts:
-   python3 src/utils/telegram_alerts.py
-
-### Alert Types
-
-| Event | Condition | Priority |
-|-------|-----------|----------|
-| Cycle Report | Every RUN_CYCLE | INFO |
-| Health Factor Alert | HF < 1.5 | CRITICAL |
-| Emergency Alert | HF < 1.2 | EMERGENCY |
-| Consensus Alert | LIQUIDATE/EMERGENCY_EXIT | CRITICAL |
-
-### Files Added
-
-- src/agents/consensus_engine_v2.py - Multi-agent consensus engine
-- src/utils/telegram_alerts.py - Telegram alert system
-- src/agents/orchestrator_v2_adapter.py - Adapter for v2.2 features
-
-### Zero Breaking Changes
-
-All v2.2 features are opt-in. The existing orchestrator.py remains untouched.
-To enable: import app_v2 from orchestrator_v2_adapter.py instead of app.
-
-## Rate Limiting & API Keys
-
-TALOS uses Groq Llama-3.3-70b for AI reasoning with key rotation support.
-
-Set up to 3 Groq API keys for unlimited autonomous operation:
-
-```env
-GROQ_API_KEY=your_key_1
-GROQ_API_KEY_2=your_key_2  
-GROQ_API_KEY_3=your_key_3
-```
-
-Free tier: 14,400 requests/day per key. With 3 keys = 43,200 req/day — sufficient for continuous autonomous operation at 120s cycle interval.
-
----
-
-## 🆚 Human vs AI — Oversight Mode (v2.3)
-
-> **Live:** https://talos-systems-talos-awwf.vercel.app/arena
-
-A head-to-head mode that puts a human in the loop as TALOS's risk overseer. TALOS proposes autonomous trade decisions one by one — **you approve or reject each call** — and two portfolios are tracked side by side from a $1,000 start.
-
-- **AI Autonomous** — executes *every* decision TALOS makes (compounding)
-- **Human-Supervised** — executes *only* the trades you approve; vetoed trades are skipped
-- **Verdict + scorecard** — final ROI showdown, plus `GOOD_VETOES` (losing trades you blocked) and `BAD_VETOES` (winning trades you rejected)
-- **Per-round breakdown** — action, AI confidence, your decision and realized PnL for every scenario
-- **Replay** — reset and try a different approval strategy
-
-### Why it matters
-This directly addresses the hackathon's **Human vs AI** track: instead of asking "should you trust the agent?", it *quantifies* the value a human overseer adds (or destroys) on top of an autonomous agent as a measurable ROI delta.
-
-| Element | Detail |
-|---------|--------|
-| Route | `/arena` — nav **Human vs AI** (`OVERSIGHT`) |
-| Decisions | 6 deterministic market scenarios (MNT / mETH / yield farm) |
-| Mechanic | Approve / Reject per round — human veto power |
-| Output | AI vs Human ROI, good/bad veto counts, full replay |
-| Stack | React + Framer Motion, 100% client-side (no backend dependency) |
+Built by [Artem1981777](https://github.com/Artem1981777) for Turing Test Hackathon 2026 — AI x RWA Track.
