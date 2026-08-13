@@ -1,48 +1,57 @@
-"""TALOS GuardianModule read-only gate (P0).
-Consults on-chain canExecute(amountWei, pegE18) before (simulated) execution.
-requests-only JSON-RPC, no new deps. Env-gated and offline-safe:
-no MANTLE_GUARDIAN_ADDR -> enabled False, allowed True (skip).
-fail-closed: addr set but RPC missing or revert -> allowed False.
+"""TALOS Guardian gate (off-chain human-veto safety layer).
+
+Replaces the old on-chain guardian module. Pure, deterministic and
+testable: it blocks any trade that exceeds the per-trade notional cap or the
+max acceptable risk score. No RPC, no chain, no external deps.
 """
 import os
 
-CAN_EXECUTE_SELECTOR = "0x2ba29217"
 
-def _enc_uint(value):
-    return format(int(value), "064x")
+def guardian_check(notional_usd, portfolio_usd, risk_score,
+                   max_trade_pct=None, max_risk_score=None):
+    """Decide whether a proposed trade may proceed.
 
-def guardian_check(amount_wei, peg_e18, rpc_url=None, address=None):
-    addr = address or os.environ.get("MANTLE_GUARDIAN_ADDR")
-    result = dict()
-    result["enabled"] = False
-    result["allowed"] = True
-    result["address"] = addr
-    result["reason"] = "MANTLE_GUARDIAN_ADDR not set"
-    if not addr:
-        return result
-    result["enabled"] = True
-    url = rpc_url or os.environ.get("MANTLE_SEPOLIA_RPC_URL", "")
-    if not url:
+    Returns a dict describing the decision. allowed=False means a human must
+    intervene (or the trade is simply rejected).
+    """
+    if max_trade_pct is None:
+        max_trade_pct = float(os.getenv("TALOS_MAX_TRADE_PCT", "20"))
+    if max_risk_score is None:
+        max_risk_score = float(os.getenv("TALOS_MAX_RISK_SCORE", "70"))
+
+    result = {
+        "enabled": True,
+        "allowed": True,
+        "reason": "ok",
+        "notional_usd": notional_usd,
+        "portfolio_usd": portfolio_usd,
+        "risk_score": risk_score,
+        "max_trade_pct": max_trade_pct,
+        "max_risk_score": max_risk_score,
+    }
+
+    if portfolio_usd is None or portfolio_usd <= 0:
         result["allowed"] = False
-        result["reason"] = "no rpc url configured"
+        result["reason"] = "empty_or_unknown_portfolio"
         return result
-    import requests
-    data = CAN_EXECUTE_SELECTOR + _enc_uint(amount_wei) + _enc_uint(peg_e18)
-    call = dict()
-    call["to"] = addr
-    call["data"] = data
-    payload = dict()
-    payload["jsonrpc"] = "2.0"
-    payload["method"] = "eth_call"
-    payload["params"] = [call, "latest"]
-    payload["id"] = 7
-    try:
-        res = requests.post(url, json=payload, timeout=5).json()
-        raw = res.get("result", "0x")
-        ok = isinstance(raw, str) and raw.rstrip().endswith("1")
-        result["allowed"] = ok
-        result["reason"] = "canExecute=true" if ok else "canExecute=false"
-    except Exception as e:
+
+    trade_pct = 100.0 * float(notional_usd) / float(portfolio_usd)
+    result["trade_pct"] = round(trade_pct, 2)
+
+    if trade_pct > max_trade_pct:
         result["allowed"] = False
-        result["reason"] = "rpc_error:" + str(e)[:80]
+        result["reason"] = f"per_trade_cap_exceeded:{trade_pct:.1f}%>{max_trade_pct:.1f}%"
+        return result
+
+    if risk_score is not None and risk_score > max_risk_score:
+        result["allowed"] = False
+        result["reason"] = f"risk_too_high:{risk_score:.1f}>{max_risk_score:.1f}"
+        return result
+
     return result
+
+
+if __name__ == "__main__":
+    print(guardian_check(1000, 10000, 40))   # allow (10% <= 20%, risk 40 <= 70)
+    print(guardian_check(5000, 10000, 40))   # block (50% > 20%)
+    print(guardian_check(1000, 10000, 85))   # block (risk 85 > 70)

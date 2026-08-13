@@ -1,6 +1,10 @@
 """
-TALOS Orchestrator v2.1
-Integrates ReAct Agent + Allora Network for decentralized reputation
+TALOS Orchestrator (SoSoValue edition).
+
+State machine: WATCHER -> VALIDATOR -> [EMERGENCY | HOLD | EXECUTE_TRADE].
+All market intelligence comes from SoSoValue (price, indices, news).
+No external chain RPC, no third-party oracle, no mocked market data. Execution is off-chain
+(paper) and gated by a human-veto Guardian.
 """
 
 import os
@@ -13,32 +17,35 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.ai.llm_manager import get_llm_manager
 from src.ai.memory import get_memory, MemoryEntry
-from src.ai.risk_engine import get_risk_engine, RiskMetrics
+from src.ai.risk_engine import get_risk_engine
 from src.ai.react_agent import get_react_agent, AgentDecision
-from src.integrations.allora import get_allora_client
+from src.integrations.sosovalue import get_sosovalue_client, SosoValueError
+from src import config
+from src.execution.guardian_gate import guardian_check
+from src.execution.simulator import plan_trade
 
-from src.tools.simulation import simulate_swap_slippage, estimate_gas_cost_eth
+# A spot treasury has no leverage, so liquidation risk is ~0. We still feed the
+# risk engine so VaR/Kelly/Sharpe are computed from REAL market volatility.
+SPOT_HEALTH_FACTOR = 2.0
 
 
 class TalosGraph:
-    """Enhanced state machine with AI + Allora reputation"""
-    
+    """Lightweight state machine (same engine, SoSoValue-only nodes)"""
+
     def __init__(self):
         self.nodes = {}
         self.edges = {}
         self.conditional_edges = {}
         self.entry_point = None
-        
-        # Initialize AI components
+
         self.llm = get_llm_manager()
         self.memory = get_memory()
         self.risk_engine = get_risk_engine()
         self.react_agent = get_react_agent()
-        self.allora = get_allora_client()
-        
-        print("[ORCHESTRATOR] TALOS v2.1 AI + Allora Engine initialized")
+
+        print("[ORCHESTRATOR] TALOS SoSoValue Engine initialized")
         print(f"[ORCHESTRATOR] LLM Providers: {list(self.llm.PROVIDERS.keys())}")
-        print(f"[ORCHESTRATOR] Allora: {'Mock' if self.allora.use_mock else 'Real'} mode")
+        print(f"[ORCHESTRATOR] Data source: SoSoValue OpenAPI")
 
     def add_node(self, name, func):
         self.nodes[name] = func
@@ -59,12 +66,11 @@ class TalosGraph:
         current_node = self.entry_point
         iteration = 0
         max_iterations = 10
-        
+
         while current_node and iteration < max_iterations:
             print(f"\n[ORCHESTRATOR] >>> Node: {current_node} (iteration {iteration + 1})")
-            
             updates = self.nodes[current_node](state)
-            
+
             for k, v in updates.items():
                 if isinstance(state.get(k), list) and isinstance(v, list):
                     state[k] = state[k] + v
@@ -84,218 +90,167 @@ class TalosGraph:
             else:
                 print(f"[ORCHESTRATOR] No outgoing edges, terminating")
                 break
-            
+
             iteration += 1
-        
+
         if iteration >= max_iterations:
             print("[ORCHESTRATOR] WARNING: Max iterations reached, forcing termination")
             state["errors"] = state.get("errors", []) + ["Max iterations reached"]
-        
+
         return state
 
 
-def assert_chain_id(rpc_url: str):
-    import requests
-    payload = {"jsonrpc": "2.0", "method": "eth_chainId", "params": [], "id": 0}
-    res = requests.post(rpc_url, json=payload, timeout=5).json()
-    chain_hex = res.get("result", "0x0")
-    chain_id = int(chain_hex, 16) if isinstance(chain_hex, str) else 0
-    if chain_id != 5003:
-        raise Exception(f"Wrong chainId: expected 5003 (Mantle Sepolia), got {chain_id} ({chain_hex})")
+def _price_and_market(client, symbol):
+    """Real price + market data for one symbol; raises on missing data."""
+    market = client.get_market_data(symbol)
+    price = market.get("price")
+    if not price or price <= 0:
+        raise SosoValueError(f"no price for {symbol}")
+    return price, market
 
 
-def get_erc20_balance(rpc_url, token_address, user_address):
-    import requests
-    clean_addr = user_address.replace("0x", "").lower().zfill(64)
-    data_payload = f"0x70a08231{clean_addr}"
-    rpc_payload = {
-        "jsonrpc": "2.0",
-        "method": "eth_call",
-        "params": [{"to": token_address, "data": data_payload}, "latest"],
-        "id": 2
-    }
-    try:
-        res = requests.post(rpc_url, json=rpc_payload, timeout=5).json()
-        hex_balance = res.get("result", "0x0")
-        if hex_balance == "0x" or not hex_balance:
-            return 0
-        return int(hex_balance, 16)
-    except:
-        return 0
+def _portfolio_value(client, portfolio):
+    """Compute real USD value of the holdings using live SoSoValue prices."""
+    total = 0.0
+    breakdown = {}
+    for sym, qty in portfolio.items():
+        price, _ = _price_and_market(client, sym)
+        value = price * qty
+        breakdown[sym] = {"qty": qty, "price": price, "value_usd": value}
+        total += value
+    return total, breakdown
 
 
 def watcher_node(state: dict) -> dict:
-    print("\n[WATCHER v2.1] Querying Mantle L2 Metrics & Live Gas Prices...")
-    
-    url = os.getenv("MANTLE_SEPOLIA_RPC_URL", "https://rpc.sepolia.mantle.xyz")
-    mETH_contract = "0xcDA867F2396E499B710c91527eCe1D904f8e3E43"
-    real_whale_pool = "0xe90AA81B87A9e8Bc02a5074C40a12eE605616bB8"
+    print("\n[WATCHER] Pulling live SoSoValue market intelligence...")
+    client = get_sosovalue_client()
+    symbol = config.DEFAULT_SYMBOL
 
-    block_number = "UNKNOWN"
-    gas_price_wei = 500000000
-    vault_balance_meth = 250.5
+    market = client.get_market_data(symbol)
+    portfolio = config.get_portfolio()
+    portfolio_value, breakdown = _portfolio_value(client, portfolio)
 
     try:
-        import requests
-        
-        gas_payload = {"jsonrpc": "2.0", "method": "eth_gasPrice", "params": [], "id": 3}
-        res_gas = requests.post(url, json=gas_payload, timeout=5).json()
-        if "result" in res_gas:
-            gas_price_wei = int(res_gas["result"], 16)
+        index = client.get_index_snapshot(config.DEFAULT_INDEX)
+    except SosoValueError as e:
+        index = {"ticker": config.DEFAULT_INDEX, "error": str(e)}
 
-        block_payload = {"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}
-        res_block = requests.post(url, json=block_payload, timeout=5).json()
-        block_number = int(res_block["result"], 16)
-        
-        raw_balance = get_erc20_balance(url, mETH_contract, real_whale_pool)
-        balance_eth = raw_balance / 10**18
-        vault_balance_meth = balance_eth if balance_eth > 0 else 250.5
-        
-    except Exception as e:
-        print(f"[WATCHER] RPC Warning: {str(e)}")
+    try:
+        news = client.get_news(category=config.NEWS_CATEGORY, page_size=5)
+        headlines = [n.get("title") for n in news]
+    except SosoValueError as e:
+        headlines = []
 
-    print(f"[WATCHER] Current Mantle Block: {block_number}")
-    print(f"[WATCHER] Live Gas Price: {gas_price_wei / 10**9:.4f} Gwei")
-    print(f"[WATCHER] Target Pool Liquidity: {vault_balance_meth:.4f} mETH")
+    volatility = market.get("volatility") or 0.0
+    change_24h = market.get("change_pct_24h") or 0.0
 
-    # Calculate risk metrics
     risk_engine = get_risk_engine()
-    risk_metrics = risk_engine.calculate_all_metrics(
-        health_factor=1.85,
-        total_collateral=vault_balance_meth,
-        total_debt=vault_balance_meth * 0.5,
-        current_apy=8.5,
-        market_volatility=0.15,
-        gas_price_gwei=gas_price_wei / 10**9
+    risk = risk_engine.calculate_all_metrics(
+        health_factor=SPOT_HEALTH_FACTOR,
+        total_collateral=portfolio_value,
+        total_debt=0.0,
+        current_apy=change_24h * 100.0,
+        market_volatility=volatility,
+        gas_price_gwei=0.0,
     )
-    
-    print(risk_engine.format_risk_report(risk_metrics))
+    print(risk_engine.format_risk_report(risk))
+    print(f"[WATCHER] {symbol} @ ${market.get('price')}, portfolio ${portfolio_value:,.2f}")
 
-    # Store observation in memory
     memory = get_memory()
     memory.store(MemoryEntry(
         id=f"obs_{int(time.time())}",
         timestamp=time.time(),
         type="observation",
-        content=f"Block {block_number}, Gas {gas_price_wei/10**9:.4f} Gwei, Balance {vault_balance_meth:.2f} mETH",
+        content=f"{symbol} price {market.get('price')}, vol {volatility:.4f}, portfolio ${portfolio_value:,.2f}",
         metadata={
-            "block_number": block_number,
-            "gas_price_wei": gas_price_wei,
-            "vault_balance": vault_balance_meth,
-            "risk_score": risk_metrics.risk_score
+            "symbol": symbol,
+            "price": market.get("price"),
+            "portfolio_value": portfolio_value,
+            "risk_score": risk.risk_score,
         },
-        importance=0.5
+        importance=0.5,
     ))
 
     return {
         "market_signals": {
-            "mETH_price_eth": 1.001,
-            "vault_balance": vault_balance_meth,
-            "gas_price_wei": gas_price_wei,
-            "block_number": block_number,
+            "symbol": symbol,
+            "price": market.get("price"),
+            "change_pct_24h": change_24h,
+            "volatility": volatility,
+            "turnover_24h": market.get("turnover_24h"),
+            "portfolio_value_usd": portfolio_value,
+            "portfolio_breakdown": breakdown,
+            "index": index,
+            "news_headlines": headlines,
+            "market_data": market,
             "risk_metrics": {
-                "risk_score": risk_metrics.risk_score,
-                "liquidation_probability": risk_metrics.liquidation_probability,
-                "recommended_action": risk_metrics.recommended_action,
-                "var_95": risk_metrics.value_at_risk_95,
-                "kelly_fraction": risk_metrics.kelly_fraction
-            }
+                "risk_score": risk.risk_score,
+                "var_95": risk.value_at_risk_95,
+                "kelly_fraction": risk.kelly_fraction,
+                "sharpe_ratio": risk.sharpe_ratio,
+                "liquidation_probability": risk.liquidation_probability,
+                "recommended_action": risk.recommended_action,
+            },
         },
-        "errors": []
+        "errors": [],
     }
 
 
 def validator_node(state: dict) -> dict:
-    print("\n[VALIDATOR v2.1] Running AI-Powered Risk Assessment + Allora Reputation...")
-    
+    print("\n[VALIDATOR] Running AI-powered analysis on live SoSoValue data...")
     signals = state.get("market_signals", {})
     risk_metrics = signals.get("risk_metrics", {})
-    
-    # Quick guardrails
-    mETH_price = signals.get("mETH_price_eth", 1.0)
-    gas_price = signals.get("gas_price_wei", 0)
-    balance = signals.get("vault_balance", 0)
-    
-    if mETH_price < 0.97:
-        print("[VALIDATOR] CRITICAL TRIGGER: De-peg Risk Detected!")
+    change_24h = signals.get("change_pct_24h", 0.0)
+    portfolio_value = signals.get("portfolio_value_usd", 0.0)
+
+    # Hard guardrail on a real crash signal (>15% daily drop)
+    if change_24h is not None and change_24h <= -0.15:
+        print("[VALIDATOR] CRITICAL: >15% 24h drawdown detected -> emergency")
         return {
-            "risk_scores": {"depeg_risk": 1.0, "ai_confidence": 1.0},
-            "next_action": "emergency_hold"
+            "risk_scores": {"crash_risk": 1.0, "ai_confidence": 1.0},
+            "next_action": "emergency_hold",
         }
-    
-    estimated_gas_eth = estimate_gas_cost_eth(gas_price)
-    max_allowed_gas = balance * 0.005
-    if estimated_gas_eth > max_allowed_gas:
-        print("[VALIDATOR] WARNING: High Gas Cost relative to trade size")
-        return {
-            "risk_scores": {"high_gas_risk": 1.0, "ai_confidence": 0.8},
-            "next_action": "yield_hold"
-        }
-    
-    # AI-powered deep analysis via ReAct Agent
+
     print("[VALIDATOR] Invoking ReAct Agent for deep analysis...")
-    
     try:
         agent = get_react_agent()
-        
         agent_state = {
-            "health_factor": 1.85,
-            "total_collateral": balance,
-            "total_debt": balance * 0.5,
-            "current_apy": 8.5,
-            "market_volatility": 0.15,
-            "gas_price_gwei": gas_price / 10**9,
-            "block_number": signals.get("block_number", "UNKNOWN"),
-            "vault_balance": balance
+            "symbol": signals.get("symbol"),
+            "price": signals.get("price"),
+            "change_pct_24h": change_24h,
+            "market_volatility": signals.get("volatility"),
+            "health_factor": SPOT_HEALTH_FACTOR,
+            "total_collateral": portfolio_value,
+            "total_debt": 0.0,
+            "current_apy": (change_24h or 0.0) * 100.0,
+            "portfolio_breakdown": signals.get("portfolio_breakdown", {}),
+            "index": signals.get("index", {}),
+            "news_headlines": signals.get("news_headlines", []),
         }
-        
+
         decision = agent.think(agent_state)
-        
-        # Submit to Allora for reputation verification
-        print("[VALIDATOR] Submitting decision to Allora Network...")
-        allora = get_allora_client()
-        allora_result = allora.submit_inference(
-            agent_id="talos_v2_1",
-            prediction=decision.confidence,
-            metadata={
-                "action": decision.action,
-                "risk_score": decision.risk_score,
-                "expected_roi": decision.expected_roi,
-                "timestamp": int(time.time())
-            }
-        )
-        
-        # Get Allora reputation
-        allora_rep = allora.get_agent_reputation("talos_v2_1")
-        _eth_pred = allora_result.get("allora_value", 0)
-        print("[ALLORA] Real ETH inference (oracle):", _eth_pred, "source:", allora_result.get("source", "mock"))
-        print(f"[ALLORA] Reputation: {allora_rep['tier']} (Score: {allora_rep['score']})")
-        
+
         action_map = {
             "HOLD": "yield_hold",
-            "REBALANCE": "execute_rebalance",
+            "BUY": "execute_trade",
+            "SELL": "execute_trade",
+            "REBALANCE": "execute_trade",
+            "EMERGENCY_EXIT": "emergency_hold",
+            # risk-engine fallback vocabulary:
+            "YIELD_OPTIMIZE": "yield_hold",
             "LIQUIDATE": "emergency_hold",
-            "FLASH_LOAN_ARB": "execute_rebalance",
-            "YIELD_SWITCH": "execute_rebalance",
-            "EMERGENCY_EXIT": "emergency_hold"
         }
-        
         next_action = action_map.get(decision.action, "yield_hold")
-        
-        print(f"[VALIDATOR] AI Decision: {decision.action} -> Routing to: {next_action}")
+
+        print(f"[VALIDATOR] AI Decision: {decision.action} -> {next_action}")
         print(f"[VALIDATOR] Confidence: {decision.confidence*100:.1f}%, Risk: {decision.risk_score:.1f}/100")
-        print(f"[VALIDATOR] Allora Consensus: {allora_result.get('consensus_score', 'N/A')}")
-        
+
         return {
             "risk_scores": {
                 "ai_confidence": decision.confidence,
                 "ai_risk_score": decision.risk_score,
                 "ai_expected_roi": decision.expected_roi,
                 "ai_reasoning": decision.reasoning[:200],
-                "allora_consensus": allora_result.get("consensus_score", 0),
-                "allora_eth_price": allora_result.get("allora_value", 0),
-                "allora_reputation": allora_rep.get("score", 0),
-                "allora_tier": allora_rep.get("tier", "UNKNOWN")
             },
             "next_action": next_action,
             "ai_decision": {
@@ -305,139 +260,125 @@ def validator_node(state: dict) -> dict:
                 "risk_score": decision.risk_score,
                 "expected_roi": decision.expected_roi,
                 "execution_plan": decision.execution_plan,
-                "simulation_required": decision.simulation_required
-            }
+                "simulation_required": decision.simulation_required,
+            },
         }
-        
+
     except Exception as e:
         print(f"[VALIDATOR] AI Agent failed: {str(e)}")
         print("[VALIDATOR] Falling back to risk engine recommendation...")
-        
         recommended = risk_metrics.get("recommended_action", "HOLD")
         action_map = {
             "EMERGENCY_EXIT": "emergency_hold",
-            "REBALANCE": "execute_rebalance",
+            "LIQUIDATE": "emergency_hold",
+            "REBALANCE": "execute_trade",
             "HOLD": "yield_hold",
-            "YIELD_OPTIMIZE": "execute_rebalance"
+            "YIELD_OPTIMIZE": "yield_hold",
         }
-        
         return {
             "risk_scores": {
                 "ai_confidence": 0.5,
                 "ai_risk_score": risk_metrics.get("risk_score", 50),
-                "fallback": True
+                "fallback": True,
             },
-            "next_action": action_map.get(recommended, "yield_hold")
+            "next_action": action_map.get(recommended, "yield_hold"),
         }
 
 
 def emergency_node(state: dict) -> dict:
-    print("[CRITICAL] EMERGENCY NODE: Capital Flight active...")
-    
+    print("[CRITICAL] EMERGENCY NODE: move to stables / exit risk...")
     memory = get_memory()
     memory.store(MemoryEntry(
         id=f"emergency_{int(time.time())}",
         timestamp=time.time(),
         type="decision",
-        content="EMERGENCY_EXIT executed - capital flight mode",
+        content="EMERGENCY_EXIT recommended - exit risk",
         metadata={"action": "EMERGENCY_EXIT", "trigger": "validator"},
-        importance=1.0
+        importance=1.0,
     ))
-    
     return {
-        "execution_payload": [{"action": "WITHDRAW_ALL", "reason": "Emergency"}],
-        "errors": []
+        "execution_payload": [{"action": "EXIT_TO_STABLES", "reason": "Emergency", "requires_human_approval": True}],
+        "errors": [],
     }
 
 
 def hold_node(state: dict) -> dict:
-    print("[HOLD] YIELD HOLD NODE: Waiting for better conditions...")
-    
+    print("[HOLD] Conditions not favourable for a trade. Monitoring...")
     memory = get_memory()
     memory.store(MemoryEntry(
         id=f"hold_{int(time.time())}",
         timestamp=time.time(),
         type="decision",
-        content="HOLD - conditions not optimal for rebalancing",
+        content="HOLD - conditions not optimal for a trade",
         metadata={"action": "HOLD"},
-        importance=0.3
+        importance=0.3,
     ))
-    
     return {"execution_payload": [], "errors": []}
 
 
-def rebalance_node(state: dict) -> dict:
+def execute_trade_node(state: dict) -> dict:
     signals = state.get("market_signals", {})
-    balance = signals.get("vault_balance", 0)
-    gas_price = signals.get("gas_price_wei", 0)
     ai_decision = state.get("ai_decision", {})
-    
-    amount_wei = int(balance * 10**18)
-    # [P0] on-chain GuardianModule circuit breaker (read-only canExecute)
-    from src.execution.guardian_gate import guardian_check
-    _peg_e18 = int(signals.get("mETH_price_eth", 1.0) * 10**18)
-    _g = guardian_check(amount_wei, _peg_e18)
-    if _g["enabled"]:
-        print("[GUARDIAN]", "ALLOW" if _g["allowed"] else "BLOCK", _g["reason"], "addr=", _g["address"])
-        if not _g["allowed"]:
-            return {"execution_payload": [], "errors": ["guardian_blocked:" + _g["reason"]], "guardian": _g}
-    else:
-        print("[GUARDIAN] skipped:", _g["reason"])
-    
-    print(f"[EXECUTOR] AI-planned rebalancing: {balance:.2f} mETH")
-    
-    execution_plan = ai_decision.get("execution_plan", [])
-    if execution_plan:
-        print(f"[EXECUTOR] Using AI execution plan ({len(execution_plan)} steps)")
-        for step in execution_plan:
-            print(f"  Step {step.get('step', '?')}: {step.get('action', '?')} on {step.get('protocol', '?')}")
-    
-    slippage = 0.5 if gas_price < 1000000000 else 1.0
-    print(f"[SIMULATOR] Running pre-flight simulation with adaptive slippage ({slippage}%)...")
-    
-    sim_results = simulate_swap_slippage(amount_wei, slippage_tolerance_pct=slippage)
+    portfolio_value = signals.get("portfolio_value_usd", 0.0)
+    symbol = signals.get("symbol")
+    market = signals.get("market_data", {})
+    risk_score = signals.get("risk_metrics", {}).get("risk_score", 0.0)
 
-    # [P0] real on-chain pre-trade dry-run gate before (simulated) execution
-    preflight_info = {"enabled": False, "reason": "MANTLE_ROUTER_ADDR not set"}
-    _router = os.environ.get("MANTLE_ROUTER_ADDR")
-    if _router:
-        from src.execution.simulator import preflight
-        _meth = "0xcDA867F2396E499B710c91527eCe1D904f8e3E43"
-        _quote = os.environ.get("MANTLE_QUOTE_TOKEN", _meth)
-        _pf = preflight(_router, amount_wei, [_meth, _quote], sim_results["amount_out_min"])
-        preflight_info = {"enabled": True, "ok": _pf.ok, "reason": _pf.reason, "amount_out": _pf.amount_out}
-        print("[PREFLIGHT]", "PASS" if _pf.ok else "BLOCK", _pf.reason, "amount_out=", _pf.amount_out)
-        if not _pf.ok:
-            return {"execution_payload": [], "errors": ["preflight_blocked:" + _pf.reason], "preflight": preflight_info}
-    else:
-        print("[PREFLIGHT] skipped: MANTLE_ROUTER_ADDR not configured")
-    
+    side = ai_decision.get("action", "BUY")
+    target_symbol = symbol
+    size_pct = config.MAX_TRADE_PCT
+
+    plan = ai_decision.get("execution_plan", [])
+    if plan:
+        step = plan[0]
+        try:
+            size_pct = float(step.get("size_pct", size_pct))
+        except (TypeError, ValueError):
+            pass
+        side = step.get("action", side)
+        target_symbol = step.get("symbol", symbol)
+
+    size_pct = max(0.0, min(size_pct, config.MAX_TRADE_PCT))
+    notional = portfolio_value * size_pct / 100.0
+
+    # [SAFETY] off-chain Guardian gate (human-veto)
+    g = guardian_check(notional, portfolio_value, risk_score)
+    print("[GUARDIAN]", "ALLOW" if g["allowed"] else "BLOCK", g["reason"])
+    if not g["allowed"]:
+        return {"execution_payload": [], "errors": ["guardian_blocked:" + g["reason"]], "guardian": g}
+
+    client = get_sosovalue_client()
+    try:
+        target_market = market if target_symbol == symbol else client.get_market_data(target_symbol)
+    except SosoValueError as e:
+        return {"execution_payload": [], "errors": ["market_data_error:" + str(e)], "guardian": g}
+
+    tp = plan_trade(target_symbol, side, notional, target_market)
+    print(f"[PLANNER] {side} {target_symbol} ${notional:,.2f} ~ {tp.est_units:.6f} units, slippage ~{tp.est_slippage_pct}%")
+
     payload = [{
-        "target": "MerchantMoe_Router",
-        "action": "DEPOSIT_LIQUIDITY",
-        "amount_wei": amount_wei,
-        "amount_out_min": sim_results["amount_out_min"],
-        "max_slippage_allowed_pct": slippage,
-        "suggested_gas_price": gas_price,
-        "ai_planned": bool(execution_plan)
+        "symbol": target_symbol,
+        "side": side,
+        "notional_usd": notional,
+        "est_price": tp.est_price,
+        "est_units": tp.est_units,
+        "est_slippage_pct": tp.est_slippage_pct,
+        "planned": tp.ok,
+        "reason": tp.reason,
+        "requires_human_approval": True,
     }]
-    
+
     memory = get_memory()
     memory.store(MemoryEntry(
         id=f"exec_{int(time.time())}",
         timestamp=time.time(),
         type="decision",
-        content=f"REBALANCE executed: {balance:.2f} mETH, slippage {slippage}%",
-        metadata={
-            "action": "REBALANCE",
-            "amount": balance,
-            "slippage": slippage,
-            "gas_price": gas_price
-        },
-        importance=0.8
+        content=f"{side} {target_symbol} ${notional:,.2f} (slippage ~{tp.est_slippage_pct}%)",
+        metadata={"action": side, "symbol": target_symbol, "notional_usd": notional},
+        importance=0.8,
     ))
-    
-    return {"execution_payload": payload, "errors": [], "preflight": preflight_info}
+
+    return {"execution_payload": payload, "errors": [], "guardian": g}
 
 
 # Build workflow
@@ -447,7 +388,7 @@ workflow.add_node("watcher", watcher_node)
 workflow.add_node("validator", validator_node)
 workflow.add_node("emergency_hold", emergency_node)
 workflow.add_node("yield_hold", hold_node)
-workflow.add_node("execute_rebalance", rebalance_node)
+workflow.add_node("execute_trade", execute_trade_node)
 
 workflow.set_entry_point("watcher")
 workflow.add_edge("watcher", "validator")
@@ -458,11 +399,10 @@ workflow.add_conditional_edges(
     {
         "emergency_hold": "emergency_hold",
         "yield_hold": "yield_hold",
-        "execute_rebalance": "execute_rebalance"
-    }
+        "execute_trade": "execute_trade",
+    },
 )
 
 app = workflow.compile()
-print("[ORCHESTRATOR] TALOS v2.1 Graph compiled successfully.")
-print("[ORCHESTRATOR] Nodes: WATCHER -> VALIDATOR -> [EMERGENCY|HOLD|REBALANCE]")
-print("[ORCHESTRATOR] Allora: Decentralized reputation verification enabled")
+print("[ORCHESTRATOR] TALOS SoSoValue Graph compiled successfully.")
+print("[ORCHESTRATOR] Nodes: WATCHER -> VALIDATOR -> [EMERGENCY|HOLD|EXECUTE_TRADE]")
