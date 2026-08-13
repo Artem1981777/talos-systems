@@ -3,7 +3,7 @@ import { readChainData, getEthPrice, computeVaultPosition, VAULT_ADDRESS } from 
 
 const router = Router();
 
-// GET /vault/stats — real on-chain mETH supply + live ETH price → dynamic vault position
+// GET /vault/stats — SoSoValue-derived holdings + live ETH price → dynamic treasury position
 router.get("/vault/stats", async (req, res) => {
   try {
     const [chain, ethPrice] = await Promise.all([readChainData(), getEthPrice()]);
@@ -12,7 +12,7 @@ router.get("/vault/stats", async (req, res) => {
 
     res.json({
       ...position,
-      network: "Mantle Sepolia",
+      network: "ValueChain Testnet",
       blockNumber: chain.blockNumber,
       contractAddress: VAULT_ADDRESS,
       rpcOk: chain.rpcOk,
