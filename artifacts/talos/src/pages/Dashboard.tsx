@@ -400,7 +400,7 @@ export default function Dashboard() {
             <h1 className="font-mono text-base font-bold tracking-wider">SYSTEM_DASHBOARD</h1>
           </div>
           <p className="font-mono text-[10px] text-muted-foreground mt-0.5 pl-6">
-            {vault?.network ?? "MANTLE_SEPOLIA"} // BLOCK #{vault?.blockNumber?.toLocaleString() ?? "..."}
+            {vault?.network ?? "SOSOVALUE_LIVE"} // BLOCK #{vault?.blockNumber?.toLocaleString() ?? "..."}
             <span className={`ml-2 ${(vault != null) ? "text-primary" : "text-amber-400"}`}>
               // RPC: {(vault != null) ? "LIVE" : "FALLBACK"}
             </span>
@@ -430,15 +430,15 @@ export default function Dashboard() {
                 if (!eth) { alert("Install MetaMask!"); return; }
                 const accounts = await eth.request({ method: "eth_requestAccounts" });
                 try {
-                  await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x138B" }] });
+                  await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x1" }] });
                 } catch {
-                  await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x138B", chainName: "Mantle Sepolia", nativeCurrency: { name: "MNT", symbol: "MNT", decimals: 18 }, rpcUrls: ["https://rpc.sepolia.mantle.xyz"], blockExplorerUrls: ["https://explorer.sepolia.mantle.xyz"] }] });
+                  await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x1", chainName: "Ethereum", nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: ["https://eth.llamarpc.com"], blockExplorerUrls: ["https://etherscan.io"] }] });
                 }
                 const apiBase = import.meta.env.VITE_API_URL || '';
                 const res = await fetch(apiBase + "/api/agent/prepare-tx", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "ALLOCATE", protocol: "Merchant Moe", amount: "100", userAddress: accounts[0] })
+                  body: JSON.stringify({ action: "ALLOCATE", protocol: "SoDEX", amount: "100", userAddress: accounts[0] })
                 });
                 const data = await res.json();
                 if (data.needsTx) {
@@ -511,7 +511,7 @@ export default function Dashboard() {
       <div>
         <div className="font-mono text-[10px] text-primary/70 tracking-widest text-glow mb-2">// VAULT_METRICS</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatBox label="TOTAL_ASSETS" value={vaultLoading ? "---" : `${parseFloat(vault?.totalAssets ?? "0").toFixed(4)}`} sub="mETH on-chain" accent pulse />
+          <StatBox label="TOTAL_ASSETS" value={vaultLoading ? "---" : `${parseFloat(vault?.totalAssets ?? "0").toFixed(4)}`} sub="portfolio (ETH)" accent pulse />
           <StatBox label="ETH_PRICE" value={vaultLoading ? "---" : `$${parseFloat(vault?.ethPrice ?? "0").toLocaleString()}`} sub="live feed" />
           <StatBox label="COLLATERAL_USD" value={vaultLoading ? "---" : `$${vault?.collateralUsd?.toLocaleString() ?? "0"}`} sub="80% LTV applied" />
           <StatBox label="VAULT_APY" value={vaultLoading ? "---" : `${vault?.apy ?? 0}%`} sub="current yield" accent />
@@ -532,7 +532,7 @@ export default function Dashboard() {
               <div className="font-mono text-base font-bold text-destructive">${vault?.debtUsd?.toLocaleString() ?? "0"}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] text-muted-foreground">mETH_PRICE</div>
+              <div className="font-mono text-[10px] text-muted-foreground">STAKED_ETH</div>
               <div className="font-mono text-base font-bold">${parseFloat(vault?.mEthPrice ?? "0").toLocaleString()}</div>
             </div>
           </div>

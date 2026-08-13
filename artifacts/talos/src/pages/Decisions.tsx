@@ -220,9 +220,9 @@ function DecisionRow({ decision, index, isNew }: { decision: any; index: number;
 
               {decision.txHash && (
                 <div className="pt-2 border-t border-border/20">
-                  <div className="font-mono text-[10px] text-muted-foreground mb-1">TX_HASH // MANTLE_SEPOLIA</div>
+                  <div className="font-mono text-[10px] text-muted-foreground mb-1">TX_REF // SODEX</div>
                   <a
-                    href={`https://explorer.sepolia.mantle.xyz/tx/${decision.txHash}`}
+                    href={`https://sodex.com/tx/${decision.txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-mono text-xs text-accent hover:text-accent/80 flex items-center gap-1.5 group"
@@ -377,7 +377,7 @@ export default function Decisions() {
                 </div>
               </div>
               <div className="text-right hidden sm:block">
-                <div className="font-mono text-[10px] text-muted-foreground">AVG_CONF</div>
+                <div className="font-mono text-[10px] text-muted-foreground">AVG<CONF</div>
                 <div className="font-mono text-sm font-bold text-accent">
                   {(summary.avgConfidence * 100).toFixed(0)}%
                 </div>
@@ -473,7 +473,7 @@ export default function Decisions() {
       )}
 
       <div className="font-mono text-[10px] text-muted-foreground/40">
-        CONTRACT: 0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7 // MANTLE_SEPOLIA // SSE_STREAM + AUTO-REFRESH 30s
+        DATA: SoSoValue OpenAPI // SSE_STREAM + AUTO-REFRESH 30s
       </div>
     </div>
   );
