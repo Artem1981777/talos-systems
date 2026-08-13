@@ -377,7 +377,7 @@ export default function Decisions() {
                 </div>
               </div>
               <div className="text-right hidden sm:block">
-                <div className="font-mono text-[10px] text-muted-foreground">AVG<CONF</div>
+                <div className="font-mono text-[10px] text-muted-foreground">AVG_CONF</div>
                 <div className="font-mono text-sm font-bold text-accent">
                   {(summary.avgConfidence * 100).toFixed(0)}%
                 </div>
