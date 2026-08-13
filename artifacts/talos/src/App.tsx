@@ -7,8 +7,6 @@ import Layout from "@/components/Layout";
 import SplashScreen from "@/components/visual/SplashScreen";
 import Dashboard from "@/pages/Dashboard";
 import Decisions from "@/pages/Decisions";
-import Identity from "@/pages/Identity";
-import Protocols from "@/pages/Protocols";
 import Analytics from "@/pages/Analytics";
 import Backtesting from "@/pages/Backtesting";
 import NotFound from "@/pages/not-found";
@@ -27,8 +25,6 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/decisions" component={Decisions} />
-        <Route path="/identity" component={Identity} />
-        <Route path="/protocols" component={Protocols} />
         <Route path="/analytics" component={Analytics} />
           <Route path="/backtesting" component={Backtesting} />
         <Route path="/arena" component={Arena} />
