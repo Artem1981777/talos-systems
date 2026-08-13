@@ -1,194 +1,211 @@
-# TALOS Systems — Autonomous AI DeFi Agent
+# TALOS - Autonomous AI Treasury Agent
 
-> **Tactical Autonomous Liquidation Operations System**
+> **Tactical Autonomous Liquidity & Operations System**
 >
-> Turing Test Hackathon 2026 — AI x RWA Track
+> Built for the **SoSoValue Buildathon** - Category: Tools
 
-**[🌐 Live Demo](https://talos-systems-talos-awwf.vercel.app)** · **[🆚 Human vs AI Arena](https://talos-systems-talos-awwf.vercel.app/arena)** · **[⚙️ Live API](https://talos-api-wfzx.onrender.com/api/healthz)** · **[🎬 Demo Video](https://youtube.com/shorts/-fU0SNQzJRQ)**
+**[Live Demo](https://talos-systems-talos-awwf.vercel.app)** | **[Human vs AI Arena](https://talos-systems-talos-awwf.vercel.app/arena)** | **[Live API](https://talos-api-wfzx.onrender.com/api/healthz)** | **[Demo Video](https://youtube.com/shorts/-fU0SNQzJRQ)**
+
+---
+
+## One-sentence idea
+
+TALOS is an autonomous AI treasury agent for solo traders that turns **SoSoValue** market data, news and index signals into risk-scored trade decisions (VaR / Kelly / Sharpe) and executes approved trades through the **SoDEX API**, with a human-veto safety layer.
 
 ---
 
 ## What is TALOS?
 
-TALOS is a fully autonomous AI agent that protects and optimizes a **mETH (Mantle ETH) yield vault**. It reads live on-chain data from **Mantle Sepolia**, reasons about market conditions with a real LLM (Groq Llama-3.3-70b), scores risk with a formal math engine, and proposes allocation decisions — all visible in real time on a cyberpunk dashboard.
+Running a portfolio alone is a full-time job: watch prices, read the news, track index rotation, size positions, manage risk. TALOS turns that into a **one-person finance business** - a single autonomous agent that does the watching, reasoning and risk math for you, and only ever acts with your approval.
 
-- **ERC-8004 agent identity** — NFT `#0x001`, vault contract [`0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7`](https://sepolia.mantlescan.xyz/address/0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7) on Mantle Sepolia
-- **Real AI reasoning** — structured OBSERVATION → RISK_ASSESSMENT → THOUGHT → ACTION output, live in the dashboard
-- **Human vs AI oversight mode** — approve/reject every AI trade and compare ROI ([/arena](https://talos-systems-talos-awwf.vercel.app/arena))
+Every cycle TALOS:
+
+1. **Pulls live market intelligence from SoSoValue** - spot prices, 24h volatility, index snapshots (e.g. `ssiMAG7`) and category news.
+2. **Reasons with a real LLM** (OpenAI -> Anthropic -> Groq, automatic fallback) inside a ReAct loop with tool calling.
+3. **Scores risk with a formal engine** - Value-at-Risk (95%), Kelly Criterion sizing, Sharpe ratio, liquidation probability.
+4. **Proposes a decision** - `HOLD` / `BUY` / `SELL` / `REBALANCE` / `YIELD_OPTIMIZE` with confidence, and routes it through a **human-veto guardian** before anything executes.
+
+**No mock data, no fake LLM.** If no API key is configured, the LLM layer raises an explicit error and TALOS falls back to the **deterministic risk engine computed on real SoSoValue data** - never on synthetic numbers.
 
 ---
 
 ## Try It (for judges)
 
-1. Open the **[Live Demo](https://talos-systems-talos-awwf.vercel.app)** — vault stats (collateral, debt, health factor) are read live from Mantle Sepolia. *Note: the free-tier API cold-starts in ~50 s after inactivity.*
-2. Trigger an **AI analysis** — the agent calls Groq Llama-3.3-70b and returns full reasoning. The shared demo key allows **5 AI requests/day per IP**; bring your own key for unlimited access.
-3. Play the **[Human vs AI Arena](https://talos-systems-talos-awwf.vercel.app/arena)** — veto the agent's trades and see whether you beat full autonomy.
+1. Open the **[Live Demo](https://talos-systems-talos-awwf.vercel.app)** - the dashboard shows live SoSoValue market data, risk metrics and the agent's latest decision. *Note: the free-tier API cold-starts in ~50 s after inactivity.*
+2. Trigger an **AI analysis** - the agent runs a full ReAct reasoning cycle and returns a risk-scored decision with its reasoning trace.
+3. Play the **[Human vs AI Arena](https://talos-systems-talos-awwf.vercel.app/arena)** - approve or veto the agent's trades and see whether a human overseer beats full autonomy.
 
 ### Live API endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/healthz` | GET | Service health |
-| `/api/vault/stats` | GET | Live vault position from Mantle Sepolia |
-| `/api/agent/think` | POST | Real LLM reasoning + allocation decision |
+| `/api/market/snapshot` | GET | Live SoSoValue price + volatility + index snapshot |
+| `/api/agent/think` | POST | Real LLM reasoning + risk-scored decision |
 | `/api/agent/status` | GET | Agent identity & state |
 | `/api/decisions` | GET | Decision history |
-| `/api/protocols` | GET | Available DeFi protocols |
 
 Base URL: `https://talos-api-wfzx.onrender.com`
 
 ---
 
+## SoSoValue Data Integration
+
+TALOS is built directly on the **SoSoValue OpenAPI** (`https://openapi.sosovalue.com/openapi/v1`). All market intelligence is real:
+
+| Data | SoSoValue endpoint |
+|------|--------------------|
+| Currency universe & IDs | `/currencies` |
+| Spot price, 24h high/low/turnover, market cap | `/currencies/{id}/market-snapshot` |
+| Index universe (13 SSI indices) | `/indices` |
+| Index price, ROI, YTD | `/indices/{ticker}/market-snapshot` |
+| Index constituents | `/indices/{ticker}/constituents` |
+| Category news (news / research / institution / KOL) | `/news` |
+
+- **Volatility** is derived from the real snapshot as `(high_24h - low_24h) / price`.
+- Client-side **rate limiting** (default 8 req/min) and **disk caching** keep the agent within demo-key limits.
+- Missing fields (e.g. some index ROIs return `null`) are surfaced as-is - never faked.
+
+See `src/integrations/sosovalue.py`.
+
+---
+
 ## Architecture
 
-```
-┌─────────────────────────────────────────┐
-│  FRONTEND (React 19 + Vite · Vercel)    │
-│  Cyberpunk UI, real-time dashboard       │
-├─────────────────────────────────────────┤
-│  API SERVER (Express + TS · Render)     │
-│  REST + SSE stream, Drizzle + Postgres   │
-│  Groq Llama-3.3-70b reasoning            │
-├─────────────────────────────────────────┤
-│  AI ENGINE (Python, standalone)          │
-│  ├─ Multi-provider LLM manager           │
-│  │   OpenAI → Anthropic → Groq → Mock    │
-│  ├─ ReAct agent (reasoning + acting)     │
-│  ├─ Risk engine (VaR, Kelly, Sharpe)     │
-│  └─ Memory (diskcache + JSON)            │
-├─────────────────────────────────────────┤
-│  BLOCKCHAIN (Mantle Sepolia)             │
-│  ├─ ERC-8004 identity NFT (live mint)    │
-│  ├─ Allora oracle + reputation           │
-│  └─ mETH vault monitoring (live reads)   │
-└─────────────────────────────────────────┘
-```
+    +-------------------------------------------+
+    |  FRONTEND (React 19 + Vite - Vercel)      |
+    |  Real-time treasury dashboard             |
+    +-------------------------------------------+
+    |  API SERVER (Express + TS - Render)       |
+    |  REST + SSE stream, Drizzle + Postgres    |
+    +-------------------------------------------+
+    |  AI ENGINE (Python)                       |
+    |  |- Multi-provider LLM manager            |
+    |  |    OpenAI -> Anthropic -> Groq (real)  |
+    |  |- ReAct agent (reasoning + acting)      |
+    |  |- Risk engine (VaR, Kelly, Sharpe)      |
+    |  \- Memory (diskcache + JSON)             |
+    +-------------------------------------------+
+    |  DATA (SoSoValue OpenAPI)                 |
+    |  |- Prices + 24h volatility               |
+    |  |- SSI indices (ssiMAG7, ssiDeFi, ...)   |
+    |  \- Category news feed                    |
+    +-------------------------------------------+
 
 | Layer | Technologies |
 |-------|-------------|
-| Frontend | React 19, Vite, TypeScript, Tailwind v4, Framer Motion, wouter |
+| Frontend | React 19, Vite, TypeScript, Tailwind, Framer Motion, wouter |
 | Backend | Express 5, TypeScript, Drizzle ORM, PostgreSQL |
-| AI | Groq Llama-3.3-70b (live), Python multi-provider engine (ReAct) |
+| AI | Multi-provider LLM engine (OpenAI / Anthropic / Groq), ReAct + tool calling |
 | Risk | Custom VaR, Kelly Criterion, Sharpe Ratio |
-| Blockchain | Mantle Sepolia, ethers.js v6, Solidity 0.8.24 |
+| Data | SoSoValue OpenAPI (prices, indices, news) |
+| Execution | Off-chain human-veto guardian -> SoDEX Trading API (roadmap) |
 | Infra | Vercel (frontend), Render (API + Postgres) |
 
 ---
 
 ## Quick Start (local)
 
-```bash
-git clone https://github.com/Artem1981777/talos-systems.git
-cd talos-systems
+    git clone https://github.com/Artem1981777/talos-systems.git
+    cd talos-systems
 
-# Full web stack (Node 20+, pnpm)
-pnpm install
-PORT=3000 pnpm --filter @workspace/api-server dev   # API on :3000
-pnpm --filter @workspace/talos dev                   # frontend (Vite)
+    # Full web stack (Node 20+, pnpm)
+    pnpm install
+    PORT=3000 pnpm --filter @workspace/api-server dev   # API on :3000
+    pnpm --filter @workspace/talos dev                  # frontend (Vite)
 
-# Python AI engine — works with zero API keys (Mock LLM)
-pip install -r requirements.txt
-export USE_MOCK_LLM=true USE_MOCK_ALLORA=true
-PYTHONPATH=$(pwd) python3 src/main.py
+    # Python AI engine
+    pip install -r requirements.txt
 
-# ...or with real providers
-export GROQ_API_KEY=gsk_...        # and/or OPENAI_API_KEY / ANTHROPIC_API_KEY
-PYTHONPATH=$(pwd) python3 src/main.py
-```
+    # 1) SoSoValue key is REQUIRED (real market data, no mock fallback)
+    export SOSO_API_KEY=your_sosovalue_key
+    export SOSO_RATE_PER_MIN=8
 
-Environment for the deployed API (`render.yaml`): `DATABASE_URL` (Postgres), `GROQ_API_KEY` (AI reasoning).
+    # 2) LLM key is OPTIONAL. With a key you get live reasoning;
+    #    without one, TALOS uses the deterministic risk engine on real data.
+    export GROQ_API_KEY=gsk_...        # recommended (free) - and/or OPENAI_API_KEY / ANTHROPIC_API_KEY
+
+    # 3) Portfolio + run parameters
+    export TALOS_SYMBOL=BTC TALOS_INDEX=ssiMAG7 TALOS_NEWS_CATEGORY=1
+    export TALOS_MAX_TRADE_PCT=20 TALOS_MAX_RISK_SCORE=70
+    export TALOS_PORTFOLIO='{"BTC": 0.5, "ETH": 4, "USDS": 1000}'
+
+    PYTHONPATH=$(pwd) python3 src/main.py
+
+Environment for the deployed API (`render.yaml`): `DATABASE_URL` (Postgres), `SOSO_API_KEY` (market data), `GROQ_API_KEY` (AI reasoning).
 
 ---
 
 ## AI Engine
 
-### LLM reasoning (live, on the API)
-- **Groq Llama-3.3-70b** generates structured decisions: OBSERVATION → RISK_ASSESSMENT → THOUGHT → NEXT_ACTION → ACTION + confidence
-- **Shared-pool protection**: 5 requests/day per IP on the demo key; `x-anthropic-key` header for BYOK; demo fallback mode for offline judging
+### Multi-provider LLM (real keys only)
+- **Priority with circuit breaker**: OpenAI GPT-4o -> Anthropic Claude 3.5 Sonnet -> Groq Llama-3.3-70b, with automatic fallback across providers.
+- **No mock LLM.** If no key is set or every provider fails, `generate()` raises `LLMError` and the agent falls back to the deterministic risk engine.
 
-### Python engine (standalone)
-- **Multi-provider with circuit breaker**: OpenAI GPT-4o → Anthropic Claude 3.5 → Groq → Mock LLM (no keys needed)
-- **ReAct pattern**: OBSERVE → ANALYZE → DECIDE → PLAN → EXECUTE with tool calling (`get_vault_state`, `get_market_data`, `calculate_risk_metrics`), max 5 iterations, conservative fallback
-- **Risk engine**: VaR (95% CI), Kelly Criterion position sizing, Sharpe Ratio, liquidation-probability model
-- **Memory**: diskcache short-term (7-day TTL) + JSON long-term (importance > 0.7) with auto-consolidation
-- **Telegram alerts**: cycle reports, health-factor warnings (HF < 1.5 critical, < 1.2 emergency) — see `src/utils/telegram_alerts.py`
+### ReAct agent
+- **OBSERVE -> ANALYZE -> DECIDE -> PLAN** loop (max 5 iterations) with tool calling: `get_market_data`, `get_index_data`, `get_crypto_news`, `calculate_risk_metrics`, `get_recent_decisions`.
+- Actions: `HOLD` / `BUY` / `SELL` / `REBALANCE` / `EMERGENCY_EXIT`.
+
+### Risk engine
+- **VaR (95% CI)**, **Kelly Criterion** position sizing, **Sharpe Ratio**, liquidation-probability model, recommended action (`HOLD` / `REBALANCE` / `EMERGENCY_EXIT` / `YIELD_OPTIMIZE`).
+
+### Memory
+- diskcache short-term store + JSON long-term store, decision history feeds back into future reasoning.
 
 ---
 
-## 🆚 Human vs AI — Oversight Mode
+## Human vs AI - Oversight Mode
 
 > **Live:** https://talos-systems-talos-awwf.vercel.app/arena
 
-TALOS proposes trade decisions one by one — **you approve or reject each call** — and two portfolios are tracked side by side from a $1,000 start:
+TALOS proposes trade decisions one by one - **you approve or reject each call** - and two portfolios are tracked side by side from the same start:
 
-- **AI Autonomous** — executes *every* decision TALOS makes (compounding)
-- **Human-Supervised** — executes *only* the trades you approve
-- **Verdict + scorecard** — final ROI showdown, `GOOD_VETOES` (losing trades you blocked) vs `BAD_VETOES` (winners you rejected), full per-round breakdown, replayable
+- **AI Autonomous** - executes *every* decision TALOS makes (compounding)
+- **Human-Supervised** - executes *only* the trades you approve
+- **Verdict + scorecard** - final ROI showdown, `GOOD_VETOES` (losing trades you blocked) vs `BAD_VETOES` (winners you rejected), full per-round breakdown
 
 Instead of asking *"should you trust the agent?"*, the arena **quantifies** the value a human overseer adds (or destroys) as a measurable ROI delta.
 
 ---
 
-## 🌐 Allora Network Integration
+## Safety - Off-chain Human-Veto Guardian
 
-Decentralized AI inference and reputation via a **live Allora consumer-API oracle** (real ETH price feed, topic 1), with mock fallback for keyless demos:
+Before any execution, every decision passes through a deterministic **guardian gate** (`src/execution/guardian_gate.py`) and a **pre-trade simulator** (`src/execution/simulator.py`):
 
-- Consensus scoring for agent decisions, on-chain reputation in the ERC-8004 identity
-- Reputation tiers: NOVICE → INTERMEDIATE → ADVANCED → EXPERT → LEGENDARY (0 → 9000+)
-
-```bash
-export ALLORA_API_KEY=your_key   # or USE_MOCK_ALLORA=true
-export ALLORA_TOPIC_ID=1
-```
+- **Per-trade cap** (`TALOS_MAX_TRADE_PCT`) and **max risk-score gate** (`TALOS_MAX_RISK_SCORE`).
+- **Fail-closed**: any error or missing data downgrades the trade to a no-op.
+- **Human veto**: no trade executes without explicit approval in the arena.
+- Pure and offline-safe, so evaluation and CI stay deterministic.
 
 ---
 
-## 🏆 Hackathon Criteria Alignment
+## Buildathon Criteria Alignment
 
-| Criteria | TALOS Implementation |
-|----------|---------------------|
-| **ERC-8004 Agent Identity** | Live identity NFT minted on Mantle Sepolia |
-| **AI Reasoning** | Live Groq LLM on the API + ReAct engine with tool calling |
-| **On-chain Benchmarking** | Allora Network oracle + reputation |
-| **Risk Management** | Formal VaR / Kelly / Sharpe engine |
-| **Human vs AI** | Live oversight arena with ROI showdown ([/arena](https://talos-systems-talos-awwf.vercel.app/arena)) |
-| **mETH Vault Management** | Live Mantle Sepolia vault reads |
+| Criteria (weight) | TALOS Implementation |
+|-------------------|----------------------|
+| **User Value (30%)** | Turns a full-time solo-trading workload into one autonomous, risk-scored agent with human veto - a one-person finance business |
+| **Working Demo (25%)** | Live dashboard + API + arena, end-to-end run green on real SoSoValue data |
+| **Logic & Workflow (20%)** | ReAct reasoning loop + formal VaR / Kelly / Sharpe risk engine + guardian gate |
+| **Data-API Integration (15%)** | Deep SoSoValue OpenAPI integration: prices, volatility, 13 SSI indices, category news |
+| **UX (10%)** | Real-time treasury dashboard + interactive Human-vs-AI oversight arena |
 
 ---
 
 ## Project Status
 
-- ✅ Live frontend (Vercel) + API (Render) + PostgreSQL
-- ✅ Real LLM reasoning on the deployed API (Groq)
-- ✅ Live on-chain vault reads (Mantle Sepolia)
-- ✅ ERC-8004 agent identity NFT
-- ✅ Allora consumer-API oracle (live ETH inference)
-- ✅ Human vs AI oversight arena
-- ✅ Risk engine (VaR, Kelly, Sharpe) + agent memory
-- ✅ Telegram alerts
-- ✅ GuardianModule on-chain circuit breaker - deployed to Mantle Sepolia + wired into the agent
-- 🔄 Flash-loan arbitrage, cross-protocol rebalancing, strategy NFTs (planned)
-
----
-
-## On-chain Risk Guard - GuardianModule (live)
-
-Before any (simulated) execution, TALOS consults a real **on-chain circuit breaker**. The rebalance node performs a read-only `canExecute(amountWei, pegE18)` call to the deployed **GuardianModule** on Mantle Sepolia; a false result downgrades the trade to a no-op (`guardian_blocked`).
-
-- **Contract:** [`0xdE92F423f6d58bc75c0716cC30b158154d84a19a`](https://sepolia.mantlescan.xyz/address/0xdE92F423f6d58bc75c0716cC30b158154d84a19a) on Mantle Sepolia (chainId 5003)
-- **Parameters:** per-trade cap 100 mETH, daily cap 250 mETH, min peg 0.97, param timelock 2 days
-- **Guards:** pause latch, per-trade max, daily spend cap, de-peg floor (peg below 0.97 blocks execution)
-- **Integration:** `src/execution/guardian_gate.py` (requests-only JSON-RPC, no new deps), env-gated via `MANTLE_GUARDIAN_ADDR`, offline-safe (unset means skipped, so eval and CI stay hermetic), fail-closed (RPC error means blocked)
-- **Verified live:** canExecute(50e18, 1.0) returns true; canExecute(50e18, 0.95) returns false (de-peg); canExecute(200e18, 1.0) returns false (over cap)
-
-> A full-vault move (~250 mETH) intentionally exceeds the per-trade cap and is blocked by the breaker. Sizing trades within the cap (or splitting across the daily allowance) is the planned next step; raising the cap requires a 2-day timelocked setMaxTrade.
-
-**Security / key handling:** GuardianModule was deployed from a fresh burner address funded with test-only MNT. The maintainer private key is never exposed - deployment uses local Foundry (`forge create`) with the key read from a local environment variable only, never pasted into chat, logs, or remote scripts.
+- [x] Live frontend (Vercel) + API (Render) + PostgreSQL
+- [x] Real SoSoValue OpenAPI integration (prices + indices + news)
+- [x] Multi-provider LLM engine (real keys only, no mock) + deterministic risk-engine fallback
+- [x] Risk engine (VaR, Kelly, Sharpe) + agent memory
+- [x] Human vs AI oversight arena
+- [x] Off-chain human-veto guardian + pre-trade simulator
+- [x] End-to-end run verified green on live data (`execution_plan` empty, no errors)
+- [ ] SoDEX Trading API execution, position sizing within caps, strategy presets (planned)
 
 ---
 
 ## License & Team
 
-MIT License — see [LICENSE](LICENSE).
+MIT License.
 
-Built by [Artem1981777](https://github.com/Artem1981777) for Turing Test Hackathon 2026 — AI x RWA Track.
+Built by [Artem1981777](https://github.com/Artem1981777) for the **SoSoValue Buildathon**.
