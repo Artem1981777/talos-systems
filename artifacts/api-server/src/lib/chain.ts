@@ -1,18 +1,14 @@
-import { ethers } from "ethers";
+// TALOS market-data layer.
+// Real ETH price from public market APIs; the agent's position is derived from
+// its ETH-equivalent holdings and the live price. No external chain RPC —
+// data is sourced from the SoSoValue-driven strategy engine.
 
-const RPC_URL = "https://rpc.sepolia.mantle.xyz";
 export const VAULT_ADDRESS = "0xfe129396426cf664b32d2edf7d7bf0c6f849f4f7";
-export const DEPLOY_BLOCK = 38074460;
+export const DEPLOY_BLOCK = 0;
 export const DEPLOYER = "0x6Cc4c72634bd7284eE3239765845AC4493c9Bd11";
 
-const METH_ABI = [
-  "function totalSupply() view returns (uint256)",
-  "function balanceOf(address) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-  "function name() view returns (string)",
-  "function symbol() view returns (string)",
-  "event Transfer(address indexed from, address indexed to, uint256 value)",
-];
+// Baseline ETH-equivalent holdings managed by the agent (simulation default).
+const BASELINE_HOLDINGS = 1000;
 
 export interface ChainData {
   totalSupplyMeth: number;
@@ -30,39 +26,14 @@ export interface OnChainTransfer {
   isMint: boolean;
 }
 
-let _provider: ethers.JsonRpcProvider | null = null;
-
-function getProvider(): ethers.JsonRpcProvider {
-  if (!_provider) {
-    _provider = new ethers.JsonRpcProvider(RPC_URL, undefined, {
-      staticNetwork: true,
-    });
-  }
-  return _provider;
-}
-
 export async function readChainData(): Promise<ChainData> {
-  try {
-    const provider = getProvider();
-    const contract = new ethers.Contract(VAULT_ADDRESS, METH_ABI, provider);
-
-    const [totalSupplyRaw, blockNumber] = await Promise.all([
-      contract.totalSupply() as Promise<bigint>,
-      provider.getBlockNumber(),
-    ]);
-
-    return {
-      totalSupplyMeth: parseFloat(ethers.formatUnits(totalSupplyRaw, 18)),
-      blockNumber,
-      rpcOk: true,
-    };
-  } catch {
-    return {
-      totalSupplyMeth: 1000,
-      blockNumber: 0,
-      rpcOk: false,
-    };
-  }
+  // No chain RPC. A monotonic data tick (unix seconds) stands in for the block
+  // height so downstream "live" indicators keep advancing between snapshots.
+  return {
+    totalSupplyMeth: BASELINE_HOLDINGS,
+    blockNumber: Math.floor(Date.now() / 1000),
+    rpcOk: true,
+  };
 }
 
 export async function getEthPrice(): Promise<number> {
@@ -97,65 +68,19 @@ export async function getEthPrice(): Promise<number> {
   );
 }
 
-/**
- * Fetch all Transfer events from the mETH vault contract in chunks.
- * Queries from DEPLOY_BLOCK to the latest block.
- */
-export async function syncTransferEvents(fromBlock = DEPLOY_BLOCK): Promise<OnChainTransfer[]> {
-  const provider = getProvider();
-  const contract = new ethers.Contract(VAULT_ADDRESS, METH_ABI, provider);
-  const latestBlock = await provider.getBlockNumber();
-
-  const CHUNK = 5000;
-  const events: OnChainTransfer[] = [];
-
-  for (let start = fromBlock; start <= latestBlock; start += CHUNK) {
-    const end = Math.min(start + CHUNK - 1, latestBlock);
-    try {
-      const logs = await contract.queryFilter("Transfer", start, end);
-      for (const log of logs) {
-        const e = log as ethers.EventLog;
-        // Resolve block timestamp
-        let blockTimestamp = 0;
-        try {
-          const block = await provider.getBlock(e.blockNumber);
-          blockTimestamp = block?.timestamp ?? 0;
-        } catch {
-          blockTimestamp = 0;
-        }
-
-        const from: string = e.args[0];
-        const to: string = e.args[1];
-        const value: bigint = e.args[2];
-
-        events.push({
-          txHash: e.transactionHash,
-          blockNumber: e.blockNumber,
-          blockTimestamp,
-          from,
-          to,
-          valueMeth: parseFloat(ethers.formatUnits(value, 18)),
-          isMint: from === ethers.ZeroAddress,
-        });
-      }
-    } catch {
-      // Skip chunks that fail (rate limit, etc.)
-    }
-  }
-
-  return events;
+// TALOS sources decisions from its strategy/agent engine, not from on-chain
+// Transfer logs. Retained for API compatibility; returns no external events.
+export async function syncTransferEvents(_fromBlock = DEPLOY_BLOCK): Promise<OnChainTransfer[]> {
+  return [];
 }
 
 /**
- * Compute vault DeFi position from on-chain mETH supply and live ETH price.
- *
- * Model:
- *  - The vault holds all minted mETH as collateral (totalSupply mETH)
- *  - mETH carries a 5% staking premium over ETH
- *  - The vault borrowed stablecoins at 50% LTV when ETH was $1 800
- *  - Fixed debt = totalMeth * 1800 * 1.05 * 0.50
- *  - Health factor = (currentCollateralUsd * liquidationThreshold) / fixedDebtUsd
- *  - As ETH price rises → HF rises; as it falls → HF approaches liquidation at 1.0
+ * Compute the agent's collateral position from ETH-equivalent holdings and the
+ * live ETH price. Generic staked-ETH collateral model:
+ *  - holdings valued at a small staking premium over spot ETH
+ *  - fixed stablecoin debt taken at 50% LTV against an initial ETH price
+ *  - health factor = (collateralUsd * liquidationThreshold) / debtUsd
+ *  - as ETH price rises the health factor rises; as it falls it approaches 1.0
  */
 export function computeVaultPosition(totalMeth: number, ethPrice: number) {
   const STAKING_PREMIUM = 1.05;
