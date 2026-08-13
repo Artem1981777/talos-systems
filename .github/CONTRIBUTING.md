@@ -28,7 +28,7 @@ This project follows [Conventional Commits](https://www.conventionalcommits.org/
 | Scope | Description |
 |---|---|
 | `agent` | AI agent reasoning logic |
-| `chain` | Mantle RPC / on-chain |
+| `chain` | SoSoValue market data (off-chain) |
 | `ui` | Frontend components |
 | `api` | Backend routes |
 | `db` | Database schema |

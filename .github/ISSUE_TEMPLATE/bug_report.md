@@ -24,7 +24,7 @@ labels: bug
 
 ## Environment
 
-- Network: Mantle Sepolia / Mainnet
+- Environment: local / deployed (Vercel + Render)
 - Browser:
 - Agent Mode: PAUSED / ACTIVE / GUARDIAN
 
