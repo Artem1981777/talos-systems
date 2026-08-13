@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Api
   version: 0.1.0
-  description: TALOS System API - AI Agent on Mantle Network
+  description: TALOS System API - Autonomous AI treasury agent (SoSoValue + SoDEX)
 servers:
   - url: /api
     description: Base API path
@@ -65,7 +65,7 @@ paths:
     get:
       operationId: getAgentIdentity
       tags: [agent]
-      summary: Get ERC-8004 NFT agent identity
+      summary: Get agent identity
       responses:
         "200":
           description: Agent NFT identity
@@ -158,7 +158,7 @@ paths:
     get:
       operationId: listProtocols
       tags: [protocols]
-      summary: Get live APY data from Mantle DeFi protocols
+      summary: Get live APY data from SoSoValue ecosystem venues
       responses:
         "200":
           description: Protocol list with APY
