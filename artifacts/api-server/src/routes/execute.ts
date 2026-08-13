@@ -3,11 +3,11 @@ import { readChainData, getEthPrice, computeVaultPosition, VAULT_ADDRESS } from 
 
 const router = Router();
 
-// Prepare transaction for MetaMask signing
+// Prepare a simulated SoDEX order for wallet signing
 router.post("/agent/prepare-tx", async (req, res) => {
   try {
     const { action, protocol, amount, userAddress } = req.body;
-    
+
     if (!userAddress) {
       res.status(400).json({ error: "userAddress required" });
       return;
@@ -22,14 +22,14 @@ router.post("/agent/prepare-tx", async (req, res) => {
       to: VAULT_ADDRESS,
       value: "0x0",
       data: "0x",
-      chainId: "0x1389", // Mantle Sepolia
+      chainId: "0x21d45", // ValueChain testnet (138565)
       gasLimit: "0x30000",
     };
 
     // Action-specific logic
     let description = "";
     if (action?.includes("ALLOCATE")) {
-      description = `Allocate ${amount} mETH to ${protocol}`;
+      description = `Allocate ${amount} ETH to ${protocol}`;
       txData.data = `0x${Buffer.from(JSON.stringify({ action, protocol, amount })).toString("hex")}`;
     } else if (action?.includes("WITHDRAW")) {
       description = `Withdraw from ${protocol} to safety`;
@@ -41,6 +41,7 @@ router.post("/agent/prepare-tx", async (req, res) => {
 
     res.json({
       needsTx: true,
+      mode: "simulation",
       description,
       tx: txData,
       vaultState: {
@@ -48,11 +49,11 @@ router.post("/agent/prepare-tx", async (req, res) => {
         ethPrice: vault.ethPrice,
         totalAssets: vault.totalAssets,
       },
-      explorerUrl: `https://explorer.sepolia.mantle.xyz/address/${VAULT_ADDRESS}`,
+      explorerUrl: `https://testnet-gw.sodex.dev/address/${VAULT_ADDRESS}`,
       network: {
-        name: "Mantle Sepolia",
-        chainId: "0x1389",
-        rpcUrl: "https://rpc.sepolia.mantle.xyz",
+        name: "ValueChain Testnet",
+        chainId: "0x21d45",
+        rpcUrl: "https://testnet-gw.sodex.dev/api/v1/spot",
       }
     });
   } catch (e: any) {
