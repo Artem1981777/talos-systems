@@ -1,7 +1,7 @@
 {
   "protocolVersion": "0.3.0",
   "name": "TALOS",
-  "description": "Autonomous on-chain trading agent swarm for Mantle DeFi. Multi-agent reasoning across analysis, risk and execution, with ERC-8004 identity and reputation.",
+  "description": "Autonomous AI treasury agent for solo traders. Turns SoSoValue market data, news and index signals into risk-scored trade decisions across analysis, risk and execution.",
   "url": "https://talos-systems-talos-awwf.vercel.app",
   "version": "1.0.0",
   "provider": {
@@ -18,26 +18,20 @@
     {
       "id": "market-analysis",
       "name": "Market Analysis",
-      "description": "Analyzes Mantle DeFi markets (Merchant Moe, Agni, Fluxion) and emits trade signals with confidence scores.",
-      "tags": ["defi", "trading", "analysis", "mantle"]
+      "description": "Analyzes SoSoValue market data, news and index signals and emits risk-scored trade signals with confidence scores.",
+      "tags": ["markets", "trading", "analysis", "sosovalue"]
     },
     {
       "id": "autonomous-execution",
       "name": "Autonomous Execution",
-      "description": "Plans and risk-bounds swaps on Mantle DEXes from multi-agent consensus; execution is simulated (read-only, no key custody).",
-      "tags": ["execution", "swap", "onchain"]
+      "description": "Plans and risk-bounds trades via the SoDEX API from multi-agent consensus; execution is human-approved (no key custody).",
+      "tags": ["execution", "trade", "sodex"]
     },
     {
       "id": "risk-management",
       "name": "Risk Management",
       "description": "Applies position sizing, stop-loss and take-profit to agent decisions.",
       "tags": ["risk", "stop-loss", "take-profit"]
-    }
-  ],
-  "registrations": [
-    {
-      "agentRegistry": "eip155:5003:0xc94da1ad1116fb6ab4ad7665351c1defec8b2de5",
-      "agentId": 1
     }
   ],
   "trustModels": ["reputation", "feedback"]

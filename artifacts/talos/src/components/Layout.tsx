@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard, ScrollText, Fingerprint, BarChart2, Activity,
+  LayoutDashboard, ScrollText, BarChart2, Activity,
   Cpu, Shield, Zap, Radio, Menu, X, LineChart,
 } from "lucide-react";
 import ApiKeyModal from "./ApiKeyModal";
@@ -12,8 +12,6 @@ import WalletConnect from "./WalletConnect";
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, sub: "SYS_OVERVIEW" },
   { href: "/decisions", label: "Agent Log", icon: ScrollText, sub: "DECISION_HISTORY" },
-  { href: "/identity", label: "ERC-8004 ID", icon: Fingerprint, sub: "AGENT_IDENTITY" },
-  { href: "/protocols", label: "Protocols", icon: BarChart2, sub: "YIELD_INTEL" },
   { href: "/analytics", label: "Analytics", icon: LineChart, sub: "PERFORMANCE" },
   { href: "/backtesting", label: "Backtest", icon: BarChart2, sub: "SIMULATION" },
   { href: "/arena", label: "Human vs AI", icon: Activity, sub: "OVERSIGHT" },
@@ -162,7 +160,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               animate={{ opacity: tick ? 1 : 0.3 }}
               transition={{ duration: 0.3 }}
             />
-            <span className="font-mono text-[10px] text-muted-foreground">MANTLE_SEPOLIA</span>
+            <span className="font-mono text-[10px] text-muted-foreground">SOSOVALUE_LIVE</span>
           </div>
         </div>
 
@@ -191,11 +189,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="p-3 border-t border-primary/10 relative z-10 space-y-2">
             <div className="flex items-center gap-1.5 px-1">
               <Shield className="w-3 h-3 text-primary/50" />
-              <span className="font-mono text-[9px] text-primary/50 tracking-wider">ERC-8004 VERIFIED</span>
+              <span className="font-mono text-[9px] text-primary/50 tracking-wider">SIGNAL VERIFIED</span>
             </div>
             <div className="px-1 space-y-0.5">
               <div className="font-mono text-[10px] text-foreground/70">TALOS-Alpha-001</div>
-              <div className="font-mono text-[9px] text-muted-foreground/40">0xfe12...f4f7</div>
+              <div className="font-mono text-[9px] text-muted-foreground/40">SoSoValue feed</div>
             </div>
           </div>
         </aside>
@@ -232,9 +230,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <div className="p-3 border-t border-primary/10 relative z-10 space-y-1">
                   <div className="flex items-center gap-1.5 px-1">
                     <Shield className="w-3 h-3 text-primary/50" />
-                    <span className="font-mono text-[9px] text-primary/50 tracking-wider">ERC-8004 VERIFIED</span>
+                    <span className="font-mono text-[9px] text-primary/50 tracking-wider">SIGNAL VERIFIED</span>
                   </div>
-                  <div className="px-1 font-mono text-[9px] text-muted-foreground/40">0xfe12...f4f7</div>
+                  <div className="px-1 font-mono text-[9px] text-muted-foreground/40">SoSoValue feed</div>
                 </div>
               </motion.aside>
             </>
