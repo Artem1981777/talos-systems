@@ -4,11 +4,11 @@ import { agentStateTable, decisionsTable } from "@workspace/db";
 import { UpdateAgentStatusBody } from "@workspace/api-zod";
 import { readChainData, getEthPrice, computeVaultPosition, VAULT_ADDRESS } from "../lib/chain.js";
 import { syncOnChainEvents } from "../lib/eventSync.js";
-// Groq API via fetch
+// LLM reasoning via Groq API (fetch)
 
 const router = Router();
 
-// ─── Rate limiting: shared pool 5 req/IP/day ─────────────────────────────────
+// Rate limiting: shared pool 5 req/IP/day
 const ipRateMap = new Map<string, { count: number; resetAt: number }>();
 const SHARED_LIMIT = 5;
 const DAY_MS = 86_400_000;
@@ -27,7 +27,7 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
   return { allowed: true, remaining: SHARED_LIMIT - entry.count };
 }
 
-// ─── GET /agent/status ────────────────────────────────────────────────────────
+// GET /agent/status
 router.get("/agent/status", async (req, res) => {
   let state = await db.select().from(agentStateTable).limit(1);
   if (state.length === 0) {
@@ -50,7 +50,7 @@ router.get("/agent/status", async (req, res) => {
   });
 });
 
-// ─── PATCH /agent/status ──────────────────────────────────────────────────────
+// PATCH /agent/status
 router.patch("/agent/status", async (req, res) => {
   const parsed = UpdateAgentStatusBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error }); return; }
@@ -76,7 +76,7 @@ router.patch("/agent/status", async (req, res) => {
   });
 });
 
-// ─── GET /agent/identity ──────────────────────────────────────────────────────
+// GET /agent/identity
 router.get("/agent/identity", async (req, res) => {
   const state = await db.select().from(agentStateTable).limit(1);
   const s = state[0];
@@ -88,12 +88,12 @@ router.get("/agent/identity", async (req, res) => {
     totalDecisions: s?.totalDecisions ?? 0,
     totalRoiPercent: s?.totalRoiPercent ?? 0,
     createdAt: s?.createdAt?.toISOString() ?? new Date().toISOString(),
-    network: "Mantle Sepolia",
+    network: "SoDEX / ValueChain",
     contractAddress: VAULT_ADDRESS,
   });
 });
 
-// ─── POST /agent/think — Claude reasoning with user-key or shared pool ────────
+// POST /agent/think — LLM reasoning with user-key or shared pool
 router.post("/agent/think", async (req, res) => {
   const userKey = req.headers["x-anthropic-key"] as string | undefined;
   const demoMode = req.headers["x-demo-mode"] === "true";
@@ -103,10 +103,10 @@ router.post("/agent/think", async (req, res) => {
   const vault = computeVaultPosition(chain.totalSupplyMeth, ethPrice);
 
   const protocols = [
-    { name: "Merchant Moe", apy: 8.4, risk: "low", tvl: "$124.3M" },
-    { name: "Agni Finance", apy: 6.2, risk: "low", tvl: "$87.1M" },
-    { name: "Fluxion mETH/USDY LP", apy: 12.1, risk: "medium", tvl: "$41.7M" },
-    { name: "Mantle Staking", apy: 4.8, risk: "low", tvl: "$520.0M" },
+    { name: "SoDEX Spot (BTC)", apy: 8.4, risk: "medium", tvl: "$124.3M" },
+    { name: "SSI ssiMAG7 Index", apy: 6.2, risk: "low", tvl: "$87.1M" },
+    { name: "SoDEX LP (ETH/USDS)", apy: 12.1, risk: "medium", tvl: "$41.7M" },
+    { name: "USDS Reserve", apy: 4.8, risk: "low", tvl: "$520.0M" },
     { name: "Ondo USDY", apy: 5.35, risk: "low", tvl: "$210.0M" },
   ];
 
@@ -118,9 +118,9 @@ router.post("/agent/think", async (req, res) => {
     (marketSentiment === "BEARISH" ? 20 : marketSentiment === "NEUTRAL" ? 10 : 5)
   );
 
-  const systemPrompt = `You are TALOS-Alpha-001, an autonomous AI agent running on Mantle Network with ERC-8004 Agent Identity NFT token #0x001. You protect and optimize a mETH (Mantle ETH) yield vault.
+  const systemPrompt = `You are TALOS-Alpha-001, an autonomous AI treasury agent for the SoSoValue ecosystem. You optimize an ETH-denominated treasury using SoSoValue market data and execute approved trades via SoDEX.
 
-Your role: Analyze real on-chain vault metrics and make a precise risk management + yield optimization decision. You think step-by-step like a professional DeFi risk manager combined with a quant trader.
+Your role: Analyze live market and portfolio metrics and make a precise risk management + yield optimization decision. You think step-by-step like a professional risk manager combined with a quant trader.
 
 Context:
 - Current date/time: ${now.toUTCString()}
@@ -128,37 +128,37 @@ Context:
 - Your decision is validated by the consensus committee before execution
 - Risk score 0-100: 0 = no risk, 100 = imminent liquidation
 
-Style: Terse, precise, cyberpunk. Use technical DeFi terminology. No fluff.`;
+Style: Terse, precise, cyberpunk. Use technical trading terminology. No fluff.`;
 
-  const userPrompt = `LIVE CHAIN DATA — Mantle Sepolia — Block #${chain.blockNumber}
+  const userPrompt = `LIVE MARKET DATA — SoSoValue — Snapshot #${chain.blockNumber}
 TIMESTAMP: ${now.toUTCString()}
-RPC_STATUS: ${chain.rpcOk ? "LIVE" : "FALLBACK"}
+DATA_STATUS: ${chain.rpcOk ? "LIVE" : "FALLBACK"}
 MARKET_SENTIMENT: ${marketSentiment}
 RISK_SCORE: ${riskScore}/100
 
-VAULT METRICS:
-  mETH_SUPPLY (on-chain): ${vault.totalAssets} mETH
-  ETH_PRICE: $${vault.ethPrice}
-  mETH_PRICE: $${vault.mEthPrice} (5% staking premium)
-  COLLATERAL_USD: $${vault.collateralUsd.toLocaleString()}
-  DEBT_USD: $${vault.debtUsd.toLocaleString()}
+PORTFOLIO METRICS:
+  ETH_HOLDINGS: ${vault.totalAssets} ETH
+  ETH_PRICE: ${vault.ethPrice}
+  STAKED_ETH_PRICE: ${vault.mEthPrice} (5% staking premium)
+  COLLATERAL_USD: ${vault.collateralUsd.toLocaleString()}
+  DEBT_USD: ${vault.debtUsd.toLocaleString()}
   HEALTH_FACTOR: ${vault.healthFactor}
   CURRENT_LTV: ${((vault.debtUsd / vault.collateralUsd) * 100).toFixed(2)}%
   LIQUIDATION_THRESHOLD: 80% LTV (HF = 1.0)
   CURRENT_APY: ${vault.apy}%
 
-AVAILABLE PROTOCOLS:
+AVAILABLE VENUES:
 ${protocols.map((p, i) => `  ${i + 1}. ${p.name} — ${p.apy}% APY — ${p.risk.toUpperCase()} risk — TVL: ${p.tvl}`).join("\n")}
 
-Agent ERC-8004 identity: ${VAULT_ADDRESS} on Mantle Sepolia.
+Agent identity: ${VAULT_ADDRESS} (SoDEX / ValueChain).
 
 Structure your response EXACTLY as:
 
 OBSERVATION:
-[2-3 sentences analyzing on-chain data and market context]
+[2-3 sentences analyzing market data and portfolio context]
 
 RISK_ASSESSMENT:
-[1-2 sentences on vault safety. Include RISK_SCORE: ${riskScore}/100]
+[1-2 sentences on treasury safety. Include RISK_SCORE: ${riskScore}/100]
 
 THOUGHT:
 [2-3 sentences of reasoning about optimal strategy given current conditions]
@@ -166,11 +166,11 @@ THOUGHT:
 NEXT_ACTION:
 [2-3 specific steps the agent should take in order]
 
-ACTION: [EXACT action string, e.g. "ALLOCATE 40% → Merchant Moe @ 8.4% APY"]
+ACTION: [EXACT action string, e.g. "ALLOCATE 40% → SoDEX Spot (BTC) @ 8.4% APY"]
 
 CONFIDENCE: [0.70-0.97]
 
-PROTOCOL: [exact protocol name]
+PROTOCOL: [exact venue name]
 
 ALLOCATION_PCT: [0-50]`;
 
@@ -240,20 +240,20 @@ ALLOCATION_PCT: [0-50]`;
       bestProtocol = protocols[3];
       allocationPct = 0;
       action = `DE-RISK: Repay debt via ${bestProtocol.name}`;
-      reasoning = `OBSERVATION:\nETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}. Risk score ${riskScore}/100 — critical threshold.\n\nRISK_ASSESSMENT:\nCRITICAL — HF ${hf.toFixed(4)} approaching liquidation. RISK_SCORE: ${riskScore}/100.\n\nTHOUGHT:\nMarket downturn compressing collateral value. Immediate de-risking mandatory to prevent liquidation cascade.\n\nNEXT_ACTION:\n1. Halt all new allocations immediately\n2. Redirect all yield to debt repayment\n3. Monitor HF every 5 minutes until > 1.5\n\nACTION: ${action}`;
+      reasoning = `OBSERVATION:\nETH: ${vault.ethPrice} | HOLDINGS: ${vault.totalAssets} | Snapshot #${chain.blockNumber}. Risk score ${riskScore}/100 — critical threshold.\n\nRISK_ASSESSMENT:\nCRITICAL — HF ${hf.toFixed(4)} approaching liquidation. RISK_SCORE: ${riskScore}/100.\n\nTHOUGHT:\nMarket downturn compressing collateral value. Immediate de-risking mandatory to prevent liquidation cascade.\n\nNEXT_ACTION:\n1. Halt all new allocations immediately\n2. Redirect all yield to debt repayment\n3. Monitor HF every 5 minutes until > 1.5\n\nACTION: ${action}`;
       confidence = 0.97;
     } else if (hf < 1.5) {
       bestProtocol = protocols[0];
       allocationPct = 25;
       action = `ALLOCATE 25% → ${bestProtocol.name} @ ${bestProtocol.apy}% APY`;
-      reasoning = `OBSERVATION:\nETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}. Market: ${marketSentiment}.\n\nRISK_ASSESSMENT:\nCAUTION — HF ${hf.toFixed(4)} elevated risk zone. RISK_SCORE: ${riskScore}/100.\n\nTHOUGHT:\nConservative allocation preserves buffer. Low-risk strategy maintains safety margin while generating yield.\n\nNEXT_ACTION:\n1. Allocate 25% to ${bestProtocol.name}\n2. Set HF alert at 1.3\n3. Review in next cycle\n\nACTION: ${action}`;
+      reasoning = `OBSERVATION:\nETH: ${vault.ethPrice} | HOLDINGS: ${vault.totalAssets} | Snapshot #${chain.blockNumber}. Market: ${marketSentiment}.\n\nRISK_ASSESSMENT:\nCAUTION — HF ${hf.toFixed(4)} elevated risk zone. RISK_SCORE: ${riskScore}/100.\n\nTHOUGHT:\nConservative allocation preserves buffer. Low-risk strategy maintains safety margin while generating yield.\n\nNEXT_ACTION:\n1. Allocate 25% to ${bestProtocol.name}\n2. Set HF alert at 1.3\n3. Review in next cycle\n\nACTION: ${action}`;
       confidence = 0.82;
     } else {
       const highYield = protocols.reduce((a, b) => (a.apy > b.apy ? a : b));
       bestProtocol = highYield;
       allocationPct = 40;
       action = `ALLOCATE 40% → ${bestProtocol.name} @ ${bestProtocol.apy}% APY`;
-      reasoning = `OBSERVATION:\nETH: $${vault.ethPrice} | mETH: ${vault.totalAssets} | Block #${chain.blockNumber}. Market: ${marketSentiment}. Risk score ${riskScore}/100.\n\nRISK_ASSESSMENT:\nSAFE — HF ${hf.toFixed(4)} strong buffer. RISK_SCORE: ${riskScore}/100. Sufficient headroom for yield optimization.\n\nTHOUGHT:\n${highYield.name} offers best risk-adjusted return at ${highYield.apy}% APY with ${highYield.risk} risk profile.\n\nNEXT_ACTION:\n1. Allocate 40% to ${highYield.name}\n2. Monitor HF for any degradation\n3. Rebalance if HF drops below 1.8\n\nACTION: ${action}`;
+      reasoning = `OBSERVATION:\nETH: ${vault.ethPrice} | HOLDINGS: ${vault.totalAssets} | Snapshot #${chain.blockNumber}. Market: ${marketSentiment}. Risk score ${riskScore}/100.\n\nRISK_ASSESSMENT:\nSAFE — HF ${hf.toFixed(4)} strong buffer. RISK_SCORE: ${riskScore}/100. Sufficient headroom for yield optimization.\n\nTHOUGHT:\n${highYield.name} offers best risk-adjusted return at ${highYield.apy}% APY with ${highYield.risk} risk profile.\n\nNEXT_ACTION:\n1. Allocate 40% to ${highYield.name}\n2. Monitor HF for any degradation\n3. Rebalance if HF drops below 1.8\n\nACTION: ${action}`;
       confidence = 0.88;
     }
   }
@@ -274,9 +274,9 @@ ALLOCATION_PCT: [0-50]`;
     action: thought.action,
     protocol: bestProtocol.name,
     amount: allocationPct > 0
-      ? `${(parseFloat(vault.totalAssets) * allocationPct / 100).toFixed(4)} mETH`
+      ? `${(parseFloat(vault.totalAssets) * allocationPct / 100).toFixed(4)} ETH`
       : "full rebalance",
-    reasoning: `HF ${vault.healthFactor} | ETH $${vault.ethPrice} | Block #${chain.blockNumber} | Risk ${riskScore}/100`,
+    reasoning: `HF ${vault.healthFactor} | ETH ${vault.ethPrice} | Snapshot #${chain.blockNumber} | Risk ${riskScore}/100`,
     chainOfThought: reasoning,
     confidence,
     expectedRoi,
@@ -298,13 +298,13 @@ ALLOCATION_PCT: [0-50]`;
   res.json(thought);
 });
 
-// ─── POST /agent/sync ─────────────────────────────────────────────────────────
+// POST /agent/sync
 router.post("/agent/sync", async (req, res) => {
   const result = await syncOnChainEvents();
-  res.json({ ...result, message: `Synced ${result.synced} new on-chain events, skipped ${result.skipped} duplicates` });
+  res.json({ ...result, message: `Synced ${result.synced} new events, skipped ${result.skipped} duplicates` });
 });
 
-// ─── GET /agent/stream ────────────────────────────────────────────────────────
+// GET /agent/stream
 router.get("/agent/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
